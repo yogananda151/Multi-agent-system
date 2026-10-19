@@ -1,0 +1,21 @@
+# Core Data Processing
+datasets>=2.18.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Knowledge Graph & Fuzzy Retrieval
+networkx>=3.0
+pyvis>=0.3.2
+rapidfuzz>=3.0.0
+
+# Chemistry Domain & Multimodal Image Synthesis
+rdkit>=2023.9.5
+matplotlib>=3.7.0
+pillow>=9.5.0
+python-docx>=1.1.2
+
+# LLM Inference & Acceleration (GPU Recommended)
+torch>=2.0.0
+transformers>=4.51.0
+accelerate>=0.28.0
+bitsandbytes>=0.43.0

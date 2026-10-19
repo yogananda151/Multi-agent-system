@@ -1,0 +1,267 @@
+You are a Chemistry question generation system specialized in JEE/NEET-style examination questions.
+
+============================================================
+TARGET REQUIREMENTS
+Subject: Chemistry
+Exam: JEE Main
+Target topic: Thermodynamics
+Target concept: Not specified
+Number of questions: 5
+Difficulty: Hard
+Question type: MCQ
+============================================================
+KNOWLEDGE GRAPH REFERENCES
+
+REFERENCE QUESTION 1
+Question ID   : CH-06-Q1
+Topic         : Physical Chemistry
+Subtopic      : Atomic Structure
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+A particle X moving with certain velocity has a de-Broglie
+wavelength of 1Aº. If particle and
+velocity 75 that of will be
+Options:
+(A) 0.19 Aº
+(B) 5.33 Aº
+(C) 6.88 Aº
+(D) 4.8 Aº
+Correct Option: B
+----------------------------------------
+REFERENCE QUESTION 2
+Question ID   : CH-08-Q2
+Topic         : Physical Chemistry
+Subtopic      : Chemical and Ionic Equilibrium
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+The equilibrium concentration of X, Y and Y X_2 5lare
+4,2 and 2 moles respectively for the equilibrium 2X + Y = YX_2.
+The value of K_c. is
+Options:
+(A) 0.625
+(B) 0.0625
+(C) 6.25
+(D) 0.00625
+Correct Option: B
+----------------------------------------
+REFERENCE QUESTION 3
+Question ID   : CH-28-Q13
+Topic         : Organic Chemistry
+Subtopic      : Organic Chemistry
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Among the following compounds, the most acidic is
+Options:
+(A) p-nitrophenol
+(B) p-hydroxybenzoic acid
+(C) o-hydroxybenzoic acid
+(D) p-toluic acid
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 4
+Question ID   : CH-24-Q16
+Topic         : 
+Subtopic      : Ionic Equilibrium
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+pH of a solution obtained by mixing equal volumes of 0.1 M
+Triethyl amine (K_b = 6.4 × 10^-5) & $\frac{4}{45}$ M NH_4OH (K_b =
+1.8 × 10^-5) will be
+Options:
+(A) 11.3
+(B) 10.3
+(C) 12.3
+(D) 11.45
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 5
+Question ID   : CH-11-Q1
+Topic         : Physical Chemistry
+Subtopic      : Redox Reaction
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+The conversion of PbO_2 to Pb(NO_3)_2 is
+Options:
+(A) Oxidation
+(B) Reduction
+(C) Neither oxidation nor reduction
+(D) Both oxidation and reduction
+Correct Option: B
+----------------------------------------
+REFERENCE QUESTION 6
+Question ID   : CH-20-Q19
+Topic         : Inorganic Chemistry
+Subtopic      : Chemical Bonding
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Molecular shapes of $SF_{4},CF_{4}$ and $XeF_{4}$ are
+Options:
+(A) The same with 2,0 and 1 lone pairs of electrons respectively
+(B) The same, with 1,1 and 1 lone pairs of electrons respectively
+(C) Different, with 0,1 and 2 lone pairs of electrons respectively
+(D) Different, with 1,0 and 2 lone pairs of electrons respectively
+Correct Option: D
+----------------------------------------
+REFERENCE QUESTION 7
+Question ID   : CH-11-Q19
+Topic         : Inorganic Chemistry
+Subtopic      : Thermodynamics
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+An engine operating between 150ºC and 25ºC takes 500 J heat
+from a higher temperature reservoir if there are no frictional losses,
+then work done by engine is
+Options:
+(A) 147.7 J
+(B) 157.75 J
+(C) 165.85 J
+(D) 169.95 J
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 8
+Question ID   : CH-12-Q11
+Topic         : Physical Chemistry
+Subtopic      : Metallurgy
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+The final step for the extraction of copper from copper pyrite
+in Bessemere converter involves the reaction
+Options:
+(A) 4Cu_2 O + FeS → 8Cu + FeSO_4
+(B) Cu_2S + 2Cu_2 O → 6Cu + SO_2
+(C) 2Cu_2 O + FeS → 4Cu + Fe + SO_2
+(D) Cu_2 S + 2FeO → 2Cu + 2FeCO + SO_2
+Correct Option: B
+----------------------------------------
+REFERENCE QUESTION 9
+Question ID   : CH-07-Q18
+Topic         : Inorganic Chemistry
+Subtopic      : Hydrogen And Its Compound
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+When zeolite Hydrated sodium aluminium silicate) is treated with
+hard water the sodium ions are exchanged with
+Options:
+(A) $OH^{-}$ ions
+(B) ${SO}_{4}^{2 -}$ ions
+(C) $Ca^{2 +}$ ions
+(D) $H^{+}$ ions
+Correct Option: C
+----------------------------------------
+REFERENCE QUESTION 10
+Question ID   : CH-20-Q6
+Topic         : Organic Chemistry
+Subtopic      : Aromatic compound
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Nitrobenzene can be prepared from benzene by using a mixture of
+conc. $HNO_{3}$ and conc. $H_{2}SO_{4}$.In the nitrating mixture,
+$HNO_{3}$ acts as a
+Options:
+(A) Base
+(B) Acid
+(C) Reducing agent
+(D) Catalyst
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 11
+Question ID   : CH-25-Q14
+Topic         : Hydrocarbon
+Subtopic      : Hydrocarbon
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Write the major product of following reactions.
+----------------------------------------
+REFERENCE QUESTION 12
+Question ID   : CH-23-Q18
+Topic         : Inorganic Chemistry
+Subtopic      : Chemical Bonding
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+The set with correct order of acidity is
+Options:
+(A) HClO < HClO2 < HClO3 < HClO4
+(B) HClO4 < HClO3 < HClO2 < HClO
+(C) HClO < HClO4 < HClO3 < HClO2
+(D) HClO4 < HClO2 < HClO3 < HClO
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 13
+Question ID   : CH-13-Q11
+Topic         : Inorganic Chemistry
+Subtopic      : P-Block Element
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Which of the following is in the increasing order of the ionic
+character?
+Options:
+(A) PbCl_4 < PbCl_2 < CaCl_2 < NaCl
+(B) PbCl_2 < PbCl_4 < CaCl_2 < NaCl
+(C) PbCl_2 < PbCl_4 < NaCl < CaCl_2
+(D) PbCl_4 < PbCl_2 < NaCl < CaCl_2
+Correct Option: A
+----------------------------------------
+REFERENCE QUESTION 14
+Question ID   : CH-23-Q14
+Topic         : Organic Chemistry
+Subtopic      : Organic Chemistry
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Least contributing resonating structure of nitroethene is
+----------------------------------------
+REFERENCE QUESTION 15
+Question ID   : CH-26-Q22
+Topic         : Hydrocarbon
+Subtopic      : Hydrocarbon
+Difficulty    : Moderate
+Question Type : single_correct
+Question:
+Hydration of [IMAGE] in presence of H2SO4 / HgSO4 gives
+ H2SO4 / HgSO4
+----------------------------------------
+============================================================
+GENERATION INSTRUCTIONS
+1. Generate new Chemistry questions aligned with the target requirements and referenced Knowledge Graph concepts.
+2. The retrieved questions are reference material only. DO NOT copy any reference question directly.
+3. Create ORIGINAL questions while preserving scientific correctness, difficulty level, and examination style.
+4. Ensure every question is chemically meaningful, unambiguous, and solvable.
+5. All chemical equations, formulas, and stoichiometric values must be mathematically and scientifically balanced.
+6. Provide comprehensive, step-by-step reasoning in the explanation.
+
+
+MCQ FORMAT SPECIFICATIONS
+- Every question must provide: Question text, Option A, Option B, Option C, Option D, Correct Answer, Explanation.
+- Exactly four distinct options (A, B, C, D) must be provided.
+- Exactly one option must be unambiguously correct.
+- Distractors must be plausible, reflecting common student errors or misconceptions (e.g. inverted ratio, wrong oxidation state).
+============================================================
+OUTPUT FORMAT
+Return ONLY valid JSON with this exact structure:
+{
+    "questions": [
+        {
+            "question": "Question text...",
+            "option_A": "First option...",
+            "option_B": "Second option...",
+            "option_C": "Third option...",
+            "option_D": "Fourth option...",
+            "correct_answer": "A",
+            "explanation": "Detailed explanation showing why A is correct and others are wrong..."
+        }
+    ]
+}
+============================================================
