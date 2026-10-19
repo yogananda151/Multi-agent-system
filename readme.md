@@ -6,36 +6,94 @@ An automated multi-agent AI system for generating examination-grade Chemistry qu
 
 ## 🏛️ System Architecture
 
+The system utilizes an autonomous multi-agent pipeline designed to parse natural language user specifications, retrieve syllabus-grounded context from a Chemistry Knowledge Graph, construct constraint-adherent prompts, and synthesize examination-grade questions featuring both algorithmic multimodal graphics and LLM-verified textual reasoning.
+
+```mermaid
+flowchart TD
+    %% Styling
+    classDef input fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef agent fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef engine fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef storage fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef export fill:#fbe9e7,stroke:#d84315,stroke-width:2px;
+
+    User["👤 User Request<br/><i>(e.g., 'Generate 5 moderate MCQs on Chemical Kinetics')</i>"]:::input
+
+    subgraph Pipeline ["⚙️ Orchestration Pipeline (pipeline.py)"]
+        direction TB
+
+        subgraph S1 ["Phase 1: Specification Parsing"]
+            A1["<b>Agent 1: Requirement Analysis</b><br/>• Entity Extraction (Topic, Subtopic)<br/>• Schema Normalization<br/>• Difficulty & Count Allocation"]:::agent
+            R1[("📄 requirements.json")]:::storage
+        end
+
+        subgraph S2 ["Phase 2: Knowledge Retrieval"]
+            KG[("🕸️ Chemistry Knowledge Graph<br/><i>(NetworkX / PyVis)</i><br/>Subjects • Topics • Subtopics • Questions • Options")]:::storage
+            A2["<b>Agent 2: Knowledge Graph Retrieval</b><br/>• Fuzzy Concept & Entity Matching<br/>• Subtopic Graph Traversal<br/>• High-Quality Exemplar Retrieval"]:::agent
+            R2[("📄 kg_retrieved_context.json")]:::storage
+        end
+
+        subgraph S3 ["Phase 3: Prompt Engineering"]
+            A3["<b>Agent 3: Prompt Construction</b><br/>• Strict JEE Main Format Guardrails<br/>• Dynamic Few-Shot Injection<br/>• JSON Schema & Anti-Hallucination Rules"]:::agent
+            R3[("📄 question_generation_prompt.json")]:::storage
+        end
+
+        subgraph S4 ["Phase 4: Multimodal Generation & Verification (Agent 4)"]
+            direction TB
+            A4["<b>Agent 4: Multimodal Question Generator</b>"]:::agent
+
+            subgraph DualEngine ["Dual Synthesis Engines"]
+                direction LR
+                IE["<b>🎨 Multimodal Image Engine</b><br/>• <b>RDKit</b>: 2D Coordinates, Hybridisation, VSEPR<br/>• <b>Matplotlib</b>: Kinetics, Arrhenius, Energy Profiles<br/>• 100% Deterministic Ground-Truth Answers"]:::engine
+                TE["<b>🧠 Text Reasoning Engine</b><br/>• 4-Bit Quantized LLM (Qwen / Transformers)<br/>• Few-shot In-context Generation<br/>• Plagiarism & Jaccard Deduplication"]:::engine
+            end
+
+            subgraph Verif ["Verification & Quality Gate"]
+                VF{"<b>Self-Verification Loop</b><br/>Independent solver checks key<br/>& reasoning consistency"}:::engine
+            end
+        end
+
+        subgraph S5 ["Phase 5: Multi-Format Packaging"]
+            EXP["<b>📦 Packaging & Serialization (export_outputs.py)</b>"]:::export
+            OUT1["📄 JSON Bank (.json)"]:::storage
+            OUT2["🌐 Interactive HTML (.html)<br/><i>(Base64 Embedded Diagrams)</i>"]:::storage
+            OUT3["📝 Word Exam Paper (.docx)"]:::storage
+            OUT4["💾 Python Pickle (.pkl)"]:::storage
+            OUT5["🗜️ Download Bundle (.zip)"]:::storage
+        end
+    end
+
+    %% Flow Connections
+    User --> A1
+    A1 -->|Writes| R1
+    R1 --> A2
+    KG <-->|Queries & Traverses| A2
+    A2 -->|Writes| R2
+    R2 --> A3
+    A3 -->|Writes| R3
+    R3 --> A4
+
+    A4 --> DualEngine
+    IE --> Verif
+    TE --> Verif
+    Verif -->|Approved Questions| EXP
+
+    EXP --> OUT1
+    EXP --> OUT2
+    EXP --> OUT3
+    EXP --> OUT4
+    EXP --> OUT5
 ```
-User Prompt (Natural Language)
-              │
-              ▼
-    [Agent 1: Requirement Analysis]
-         (Topic, Subtopic, Type, Difficulty, Count)
-              │
-              ▼
-    [Agent 2: Knowledge Graph Retrieval]
-         (Fuzzy Concept Matching & KG Reference Questions)
-              │
-              ▼
-    [Agent 3: Prompt Construction]
-         (Strict Examination Constraints & Few-shot Prompts)
-              │
-              ▼
-    [Agent 4: Multimodal Question Generation]
-    ┌─────────────────────────┴─────────────────────────┐
-    ▼                                                   ▼
-[Image Engine (RDKit / Matplotlib)]       [Text Engine (Qwen / LLM)]
-- Molecular structures                    - Factual KG transformation
-- Hybridisation & VSEPR geometry          - Deduplication check
-- Reaction kinetics graphs                - Self-verification solver
-- 100% computed ground truth              - Strict exam formatting
-    └─────────────────────────┬─────────────────────────┘
-              │
-              ▼
-        [Exporters]
-(JSON, Pickle, Interactive HTML, Word DOCX, ZIP)
-```
+
+### 🔄 Multi-Agent Data Contract & Workflow
+
+| Stage | Responsible Agent / Module | Inputs | Core Operations & Intelligence | Output Artifact |
+|---|---|---|---|---|
+| **1. Requirements** | [`agent_1_requirement_analysis.py`](file:///d:/Yoga/DL/D12/agent_1_requirement_analysis.py) | Raw user prompt | Regex entity parsing, fallback heuristics, count allocation, difficulty mapping | `outputs/requirements.json` |
+| **2. Context Retrieval** | [`agent_2_kg_retrieval.py`](file:///d:/Yoga/DL/D12/agent_2_kg_retrieval.py) | Requirements JSON, `chemistry_knowledge_graph.pkl` | NetworkX bidirectional graph traversal, fuzzy string matching (cutoff 0.6), exemplar question extraction | `outputs/kg_retrieved_context.json` |
+| **3. Prompt Construction** | [`agent_3_prompt_construction.py`](file:///d:/Yoga/DL/D12/agent_3_prompt_construction.py) | Requirements & Retrieved Context | In-context few-shot assembly, strict single-correct constraint formatting, anti-leakage guards | `outputs/question_generation_prompt.json` |
+| **4. Generation & Verification** | [`agent_4_question_generation.py`](file:///d:/Yoga/DL/D12/agent_4_question_generation.py) | Generation Prompt & Image Banks | • **Image Engine**: Computes exact chemical coordinates with RDKit and plots kinetics curves with Matplotlib.<br/>• **Text Engine**: Generates novel questions via LLM.<br/>• **Verification Loop**: Independent solver re-evaluates correctness; rejects flawed distractors. | `outputs/generated_chemistry_questions.json` |
+| **5. Packaging** | [`export_outputs.py`](file:///d:/Yoga/DL/D12/export_outputs.py) | Generated artifacts & image directories | Formats standalone HTML with embedded base64 figures, renders styled Word tables, and zips complete release bundle | `outputs/chemistry_outputs.zip` |
 
 ---
 
