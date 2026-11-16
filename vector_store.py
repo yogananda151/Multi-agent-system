@@ -297,7 +297,10 @@ class ChemistryVectorStore:
             query=v_arr.tolist(),
             limit=top_k
         )
-        return [{"image_path": r.payload["image_path"], "score": float(r.score)} for r in res.points]
+        return [{"image_path": r.payload["image_path"], "filename": r.payload.get("filename", ""), "score": float(r.score)} for r in res.points]
+
+    # Alias for search_similar_diagrams
+    search_diagrams = search_similar_diagrams
 
     # ==========================================================================
     # 3. CHEMICAL STRUCTURE FINGERPRINT INDEXING & SEARCH (Morgan ECFP4 / Substructure Hash)

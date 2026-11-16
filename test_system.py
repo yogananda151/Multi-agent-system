@@ -140,6 +140,37 @@ class TestChemistrySystem(unittest.TestCase):
         self.assertTrue(qs_num[0]["correct_answer"].isdigit() or qs_num[0]["correct_answer"].lstrip("-").isdigit())
         print("\n[PASS] Multi-format (Assertion-Reason & Numerical) question generation passed.")
 
+    def test_09_fullstack_computer_vision_suite(self):
+        """Test Fullstack Computer Vision models (U-Net, Swin-T, Classifier, Reverse CBIR)."""
+        from PIL import Image
+        import vision_engine
+
+        dummy = Image.new("L", (160, 128), color=235)
+
+        # 1. U-Net Denoising
+        restorer = vision_engine.DiagramRestorationEngine()
+        restored, metrics = restorer.denoise_and_restore(dummy)
+        self.assertEqual(restored.size, (160, 128))
+        self.assertIn("contrast_improvement_pct", metrics)
+
+        # 2. Swin-T Feature Extractor
+        extractor = vision_engine.SwinDiagramFeatureExtractor()
+        feat = extractor.extract_features(dummy)
+        self.assertEqual(len(feat), 128)
+
+        # 3. Diagram Classifier
+        classifier = vision_engine.DiagramClassifier()
+        c_res = classifier.classify(dummy)
+        self.assertIn("predicted_family", c_res)
+        self.assertGreater(c_res["confidence"], 0.70)
+
+        # 4. Reverse Diagram Search
+        searcher = vision_engine.ReverseDiagramSearchEngine()
+        matches = searcher.search_by_image(dummy, top_k=2)
+        self.assertGreaterEqual(len(matches), 1)
+        searcher.close()
+        print("\n[PASS] Fullstack Computer Vision Suite (U-Net, Swin-T, Classifier, CBIR) passed.")
+
 
 if __name__ == "__main__":
     unittest.main()

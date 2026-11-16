@@ -1,11 +1,10 @@
 {
     "requirements": {
         "Topic": "Chemical Kinetics",
-        "Question Type": "MCQ",
-        "Number": 2,
-        "Difficulty": "Moderate"
+        "Difficulty": "Hard",
+        "Number": 2
     },
-    "retrieved_count": 3,
+    "retrieved_count": 2,
     "retrieval_method": "Hybrid GraphRAG (Qdrant + FastEmbed + RRF)",
     "fallback_used": false,
     "questions": [
@@ -40,7 +39,7 @@
                 }
             ],
             "explanation": "",
-            "similarity_score": 0.7970653961942262,
+            "similarity_score": 0.7052427891935077,
             "rrf_score": 0.06402049075403121
         },
         {
@@ -53,46 +52,20 @@
             "correct_answer": "None",
             "options": [],
             "explanation": "",
-            "similarity_score": 0.7484871579300453,
+            "similarity_score": 0.688427054949704,
             "rrf_score": 0.06402049075403121
-        },
-        {
-            "question_id": "CH-15-Q13",
-            "question": "The decomposition of N2O5 in chloroform was followed by\nmeasuring the volume of O2 gas evolved: 2N2O5(CCI4) → 2N2O4(CCI4) +\nO2(g). The maximum volume of O2 gas obtained was 100 cm3. In 500\nminutes, 90 cm3 of O2 were evolved. The first order rate constant (in\nmin-1) for the disappearance of N2O5 is",
-            "topic": "Chemical Kinetics",
-            "subtopic": "Method to monitor the progress of Reactions (Titration Method",
-            "difficulty": "Moderate",
-            "question_type": "single_correct",
-            "correct_answer": "A",
-            "options": [
-                {
-                    "option": "A",
-                    "text": "$\\frac{2303}{500}$",
-                    "is_correct": true
-                },
-                {
-                    "option": "B",
-                    "text": "$\\frac{2303}{500}\\log\\frac{100}{90}$",
-                    "is_correct": false
-                },
-                {
-                    "option": "C",
-                    "text": "$\\frac{2303}{500}\\log\\frac{90}{100}$",
-                    "is_correct": false
-                },
-                {
-                    "option": "D",
-                    "text": "$\\frac{100}{10 \\times 500}$",
-                    "is_correct": false
-                }
-            ],
-            "explanation": "",
-            "similarity_score": 0.746229464444166,
-            "rrf_score": 0.061072261072261075
         }
     ],
     "topic": "Chemical Kinetics",
-    "difficulty": "Moderate",
-    "cross_chapter_coupling": null,
+    "difficulty": "Hard",
+    "cross_chapter_coupling": {
+        "pair_id": "X_KINETICS_EQUILIBRIUM",
+        "chapter_A": "Chemical Kinetics",
+        "chapter_B": "Equilibrium",
+        "concept_A": "Arrhenius Activation Energy",
+        "concept_B": "Equilibrium Constant (Kc/Kp) & van 't Hoff shift",
+        "coupling_formula": "K_eq = k_forward / k_backward; d(ln K)/dT = Delta H / (R * T^2)",
+        "description": "Temperature dependence of forward/reverse rates and dynamic equilibrium"
+    },
     "syllabus_pruned_notice": null
 }

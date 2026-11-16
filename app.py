@@ -24,6 +24,8 @@ if PROJECT_ROOT not in sys.path:
 from config import (
     OUTPUT_DIR,
     ZIP_OUTPUT_PATH,
+    GENERATED_IMAGES_DIR,
+    IMAGE_ROOT,
     AGENT1_REQUIREMENTS_PATH,
     AGENT2_OUTPUT_JSON,
     AGENT3_OUTPUT_TXT,
@@ -40,6 +42,12 @@ from pipeline import ChemistryMultiAgentPipeline
 from vector_store import ChemistryVectorStore
 from hybrid_graph_rag import HybridGraphRAGEngine
 from export_outputs import package_outputs
+from vision_engine import (
+    DiagramRestorationEngine,
+    SwinDiagramFeatureExtractor,
+    DiagramClassifier,
+    ReverseDiagramSearchEngine,
+)
 
 # Page Configuration
 st.set_page_config(
@@ -141,6 +149,7 @@ app_mode = st.sidebar.radio(
     "Choose Studio Mode:",
     [
         "🚀 Multimodal Question Generator",
+        "📸 Fullstack Computer Vision Studio",
         "🔍 Tri-Modal Vector DB Search",
         "🧠 Hybrid GraphRAG Inspector",
         "📊 System Architecture & Metrics",
@@ -152,10 +161,11 @@ st.sidebar.markdown("### ⚙️ System Capabilities")
 st.sidebar.markdown("""
 - **Symbolic Ontology**: Domain KG
 - **Vector DB**: Qdrant (3 Collections)
+- **Computer Vision**: U-Net & Swin-T
 - **Embeddings**: FastEmbed BGE-small
 - **Fusion**: Reciprocal Rank Fusion (RRF)
 - **Diagrams**: Dual-Engine (Matplotlib + RDKit)
-- **Formats**: JSON, HTML, DOCX, ZIP
+- **Formats**: JSON, HTML, DOCX, SFT JSONL, ZIP
 """)
 
 # ==============================================================================
@@ -337,7 +347,226 @@ if app_mode == "🚀 Multimodal Question Generator":
 
 
 # ==============================================================================
-# MODE 2: TRI-MODAL VECTOR DB SEARCH
+# MODE 2: FULLSTACK COMPUTER VISION STUDIO
+# ==============================================================================
+elif app_mode == "📸 Fullstack Computer Vision Studio":
+    st.markdown('<div class="main-header">📸 Fullstack Computer Vision Studio</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Deep Learning Vision Suite: PyTorch U-Net Restoration, Swin Transformer 128-D Feature Extraction, Reverse Visual Search, & Synthetic Diagram Lab.</div>', unsafe_allow_html=True)
+
+    cv_tab1, cv_tab2, cv_tab3, cv_tab4 = st.tabs([
+        "🔬 U-Net Diagram Denoising & Restoration",
+        "🔍 Reverse Visual Diagram Search (CBIR)",
+        "🏷️ Visual Diagram Anatomy & Classifier",
+        "🎨 Synthetic Diagram Laboratory",
+    ])
+
+    # Sample images finder
+    available_samples = []
+    for folder in [GENERATED_IMAGES_DIR, IMAGE_ROOT]:
+        if os.path.exists(folder):
+            for f in os.listdir(folder):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    available_samples.append(os.path.join(folder, f))
+
+    # --------------------------------------------------------------------------
+    # TAB 1: U-NET DIAGRAM RESTORATION
+    # --------------------------------------------------------------------------
+    with cv_tab1:
+        st.markdown("#### 🔬 Neural Diagram Restoration & Smudge Removal (PyTorch U-Net)")
+        st.markdown("Cleans scanned historical examination diagrams, eliminates background noise, and reconstructs crisp chemical bonds.")
+
+        u_col1, u_col2 = st.columns([1, 1])
+        with u_col1:
+            input_method = st.radio("Select Image Source:", ["Choose Sample Diagram from Project", "Upload Custom Diagram (PNG/JPG)"], horizontal=True)
+            chosen_img = None
+            if input_method == "Choose Sample Diagram from Project" and available_samples:
+                sel_sample = st.selectbox("Select Sample Diagram:", available_samples, format_func=lambda p: os.path.basename(p))
+                if sel_sample and os.path.exists(sel_sample):
+                    chosen_img = Image.open(sel_sample)
+            else:
+                uploaded = st.file_uploader("Upload scanned/degraded diagram:", type=["png", "jpg", "jpeg"])
+                if uploaded:
+                    chosen_img = Image.open(uploaded)
+
+            if chosen_img:
+                st.image(chosen_img, caption="Input Image Preview", use_container_width=True)
+
+        with u_col2:
+            st.markdown("##### 🎛️ Neural Restoration Hyperparameters")
+            contrast_val = st.slider("Contrast Enhancement Factor:", 1.0, 3.0, 1.4, 0.1)
+            sharp_val = st.slider("Unsharp Mask Line Sharpness:", 1.0, 3.0, 1.5, 0.1)
+            binarize_chk = st.checkbox("Apply Adaptive Document Line Binarization", value=False)
+
+            if chosen_img and st.button("🚀 Execute PyTorch U-Net Restoration", type="primary", use_container_width=True):
+                with st.spinner("Processing through U-Net Encoder-Bottleneck-Decoder..."):
+                    restorer = DiagramRestorationEngine()
+                    restored_img, metrics = restorer.denoise_and_restore(
+                        chosen_img,
+                        contrast_boost=contrast_val,
+                        sharpness=sharp_val,
+                        threshold_binarize=binarize_chk
+                    )
+
+                st.success("✅ Diagram Restored Successfully!")
+                st.image(restored_img, caption="Restored Output (U-Net Denoised)", use_container_width=True)
+
+                st.markdown("##### 📊 Image Restoration Metrics:")
+                rm1, rm2, rm3 = st.columns(3)
+                rm1.metric("Resolution", metrics["original_dimensions"])
+                rm2.metric("Contrast Improvement", f"+{metrics['contrast_improvement_pct']}%")
+                rm3.metric("Engine Device", metrics["device_used"].upper())
+
+                buf = io.BytesIO()
+                restored_img.save(buf, format="PNG")
+                st.download_button("📥 Download Restored PNG", buf.getvalue(), "restored_diagram.png", "image/png", use_container_width=True)
+
+    # --------------------------------------------------------------------------
+    # TAB 2: REVERSE DIAGRAM SEARCH (CBIR)
+    # --------------------------------------------------------------------------
+    with cv_tab2:
+        st.markdown("#### 🔍 Reverse Visual Diagram Search (Content-Based Image Retrieval)")
+        st.markdown("Drop in any kinetics curve or molecular graph: the **Swin Transformer Tiny** computes its 128-D visual feature representation and retrieves matching past-year questions from Qdrant.")
+
+        s_col1, s_col2 = st.columns([1, 1])
+        search_img = None
+        with s_col1:
+            if available_samples:
+                sel_search_sample = st.selectbox("Select Query Diagram:", available_samples, key="search_sample", format_func=lambda p: os.path.basename(p))
+                if sel_search_sample and os.path.exists(sel_search_sample):
+                    search_img = Image.open(sel_search_sample)
+            search_upload = st.file_uploader("Or upload image to search:", type=["png", "jpg", "jpeg"], key="search_upload")
+            if search_upload:
+                search_img = Image.open(search_upload)
+
+            if search_img:
+                st.image(search_img, caption="Query Visual", use_container_width=True)
+
+        with s_col2:
+            st.markdown("##### ⚡ Visual Representation & Nearest Neighbors")
+            top_k_diagrams = st.slider("Top Matched Exam Diagrams:", 1, 6, 3)
+            if search_img and st.button("🔍 Extract Swin-T Embedding & Query Vector DB", type="primary", use_container_width=True):
+                with st.spinner("Extracting 128-D Swin Transformer representation & querying Qdrant..."):
+                    search_engine = ReverseDiagramSearchEngine()
+                    matches = search_engine.search_by_image(search_img, top_k=top_k_diagrams)
+                    search_engine.close()
+
+                if matches:
+                    st.success(f"Retrieved {len(matches)} visually matching exam questions!")
+                    for idx, m in enumerate(matches, 1):
+                        st.markdown(f"""
+                        <div class="question-card">
+                            <span class="badge-topic">{m.get('topic', 'Chemistry')}</span>
+                            <span class="badge-rag">Swin-T Cosine Score: {m.get('similarity_score', 0):.4f}</span>
+                            <br><b>Match #{idx}:</b> <code>{m.get('filename')}</code>
+                            <p style="margin-top:8px;">{m.get('question')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+    # --------------------------------------------------------------------------
+    # TAB 3: DIAGRAM ANATOMY CLASSIFIER
+    # --------------------------------------------------------------------------
+    with cv_tab3:
+        st.markdown("#### 🏷️ Visual Diagram Anatomy & Geometry Classifier")
+        st.markdown("Deep visual feature analysis to classify coordinate axes, edge distributions, and chemical diagram families.")
+
+        c_col1, c_col2 = st.columns([1, 1])
+        class_img = None
+        with c_col1:
+            if available_samples:
+                sel_class_sample = st.selectbox("Select Diagram to Classify:", available_samples, key="class_sample", format_func=lambda p: os.path.basename(p))
+                if sel_class_sample and os.path.exists(sel_class_sample):
+                    class_img = Image.open(sel_class_sample)
+            if class_img:
+                st.image(class_img, caption="Diagram for Anatomy Inspection", use_container_width=True)
+
+        with c_col2:
+            if class_img and st.button("🏷️ Run AI Visual Classifier", type="primary", use_container_width=True):
+                classifier = DiagramClassifier()
+                c_res = classifier.classify(class_img)
+
+                st.markdown(f"""
+                <div class="question-card" style="border-left:5px solid #1E88E5;">
+                    <h3 style="margin:0;color:#1565C0;">{c_res['predicted_family']}</h3>
+                    <p style="margin-top:6px;font-size:1.1rem;"><b>Confidence:</b> {int(c_res['confidence'] * 100)}%</p>
+                    <p style="color:#546E7A;"><b>Anatomy Rationale:</b> {c_res['reason']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                cm1, cm2, cm3 = st.columns(3)
+                cm1.metric("Cartesian Axes", "Detected" if c_res["has_axes"] else "None (Molecule)")
+                cm2.metric("Edge Density", f"{c_res['edge_density']}")
+                cm3.metric("Aspect Ratio", f"{c_res['aspect_ratio']}")
+
+    # --------------------------------------------------------------------------
+    # TAB 4: SYNTHETIC DIAGRAM LABORATORY
+    # --------------------------------------------------------------------------
+    with cv_tab4:
+        st.markdown("#### 🎨 Interactive Synthetic Diagram Laboratory")
+        st.markdown("Live mathematical curve synthesis for chemical reaction kinetics and Arrhenius temperature dependency.")
+
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        lab_col1, lab_col2 = st.columns([1, 1])
+
+        with lab_col1:
+            plot_type = st.selectbox("Select Curve Family:", [
+                "Arrhenius Activation Energy (ln k vs 1/T)",
+                "First-Order Reaction Decay (ln[A] vs Time)",
+                "Zero-Order Reaction Decay ([A] vs Time)",
+            ])
+
+            if "Arrhenius" in plot_type:
+                synth_ea = st.slider("Activation Energy Ea (kJ/mol):", 30, 150, 75, 5)
+                synth_a_factor = st.slider("Frequency Factor ln(A):", 5.0, 25.0, 15.0, 1.0)
+            elif "First-Order" in plot_type:
+                synth_k = st.slider("Rate Constant k (min⁻¹):", 0.01, 0.10, 0.03, 0.005)
+                synth_t_max = st.slider("Time Duration (min):", 20, 120, 60, 10)
+            else:
+                synth_a0 = st.slider("Initial Concentration [A]₀ (mol/L):", 0.5, 3.0, 1.5, 0.1)
+                synth_k_zero = st.slider("Zero-Order Rate Constant k (mol/(L·min)):", 0.01, 0.05, 0.02, 0.005)
+
+        with lab_col2:
+            fig, ax = plt.subplots(figsize=(6, 4))
+            if "Arrhenius" in plot_type:
+                slope = -synth_ea * 1000 / 8.314
+                xs = np.linspace(0.002, 0.0035, 50)
+                ys = slope * xs + synth_a_factor
+                ax.plot(xs, ys, color="darkgreen", lw=2)
+                ax.set_xlabel("1/T (K⁻¹)", fontsize=11)
+                ax.set_ylabel("ln k", fontsize=11)
+                ax.set_title(f"Arrhenius Plot (Ea = {synth_ea} kJ/mol, Slope = {slope:.1f})", fontsize=11)
+                ax.grid(True, alpha=0.3)
+                st.metric("Computed Slope (-Ea/R)", f"{slope:.1f}")
+            elif "First-Order" in plot_type:
+                xs = np.linspace(0, synth_t_max, 50)
+                ys = -synth_k * xs
+                ax.plot(xs, ys, color="navy", lw=2)
+                ax.set_xlabel("Time, t (min)", fontsize=11)
+                ax.set_ylabel("ln([A]/[A]₀)", fontsize=11)
+                ax.set_title(f"First-Order Kinetics (k = {synth_k:.4f} min⁻¹)", fontsize=11)
+                ax.grid(True, alpha=0.3)
+                t_half = 0.693 / synth_k
+                st.metric("Computed Half-Life (t½)", f"{t_half:.2f} min")
+            else:
+                t_end = synth_a0 / synth_k_zero
+                xs = np.linspace(0, t_end, 50)
+                ys = synth_a0 - synth_k_zero * xs
+                ax.plot(xs, ys, color="purple", lw=2)
+                ax.set_xlabel("Time, t (min)", fontsize=11)
+                ax.set_ylabel("[A] (mol L⁻¹)", fontsize=11)
+                ax.set_title(f"Zero-Order Kinetics ([A]₀ = {synth_a0} M)", fontsize=11)
+                ax.grid(True, alpha=0.3)
+                st.metric("Time to Complete Reaction", f"{t_end:.1f} min")
+
+            fig.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
+
+
+# ==============================================================================
+# MODE 3: TRI-MODAL VECTOR DB SEARCH
 # ==============================================================================
 elif app_mode == "🔍 Tri-Modal Vector DB Search":
     st.markdown('<div class="main-header">🔍 Tri-Modal Qdrant Vector Store Search</div>', unsafe_allow_html=True)
