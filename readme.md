@@ -305,8 +305,11 @@ pip install -r requirements.txt
 Experience the entire system through an interactive, modern Streamlit Web Studio:
 
 ```bash
-# Launch the Web Studio
-streamlit run app.py
+# Launch the Web Studio (runs directly via Python module to bypass Windows WDAC/AppLocker)
+python -m streamlit run app.py
+
+# Or on Windows, double-click:
+run_dashboard.bat
 ```
 
 The Web Studio opens in your browser at `http://localhost:8501` and features **4 Dedicated Modes**:
