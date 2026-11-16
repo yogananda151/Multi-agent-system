@@ -31,6 +31,8 @@ from config import (
     AGENT4_OUTPUT_PKL,
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
+    SFT_OUTPUT_JSONL,
+    SFT_AUGMENTED_TRAIN_JSONL,
     GENERATED_IMAGES_DIR,
     BATCH_SIZE,
     MAX_BATCH_ATTEMPTS,
@@ -264,7 +266,8 @@ class ImageQuestionEngine:
 
     def assemble_image_question(
         self, question, correct, distractors, explanation, image_path,
-        image_type, image_description, smiles=None
+        image_type, image_description, smiles=None, diagnostics=None,
+        question_format="MCQ"
     ) -> dict:
         options = [str(correct)] + [str(d) for d in distractors][:3]
         if len(set(options)) != 4:
@@ -275,15 +278,29 @@ class ImageQuestionEngine:
         else:
             random.shuffle(options)
 
+        correct_letter = "ABCD"[options.index(str(correct))]
+
+        # CD-NS-KG-MAS: Misconception-Aware Distractor Diagnostics
+        diag_map = {}
+        for idx, letter in enumerate(["A", "B", "C", "D"]):
+            val = options[idx]
+            if letter == correct_letter:
+                diag_map[letter] = "Scientifically verified correct answer path."
+            elif diagnostics and val in diagnostics:
+                diag_map[letter] = diagnostics[val]
+            else:
+                diag_map[letter] = f"Misconception / calculation error leading to {val}."
+
         q = {
             "question": question,
             "option_A": options[0],
             "option_B": options[1],
             "option_C": options[2],
             "option_D": options[3],
-            "correct_answer": "ABCD"[options.index(str(correct))],
+            "correct_answer": correct_letter,
             "explanation": explanation,
             "question_type": "image",
+            "question_format": question_format,
             "image_type": image_type,
             "image_description": image_description,
             "generated_image": image_path,
@@ -291,6 +308,7 @@ class ImageQuestionEngine:
             "source": "image_generator",
             "difficulty_category": "computed_image",
             "verification": "computed",
+            "distractor_diagnostics": diag_map,
         }
         if smiles:
             q["smiles"] = smiles
@@ -605,11 +623,19 @@ class ImageQuestionEngine:
             ax.grid(alpha=0.3)
             question = "The graph shows a first-order reaction ln([A]/[A]\u2080) vs time. The rate constant k is"
             correct = f"{k:.4f} min\u207b\u00b9"
-            distractors = [f"{k*2:.4f} min\u207b\u00b9", f"{k/2:.4f} min\u207b\u00b9", f"{k*1.5:.4f} min\u207b\u00b9"]
+            d1 = f"{k*2:.4f} min\u207b\u00b9"
+            d2 = f"{k/2:.4f} min\u207b\u00b9"
+            d3 = f"{k*1.5:.4f} min\u207b\u00b9"
+            distractors = [d1, d2, d3]
+            diag = {
+                d1: "Misconception: Doubled slope assuming two-reactant stoichiometry",
+                d2: "Misconception: Multiplied delta_t by 2 instead of computing reciprocal slope",
+                d3: "Misconception: Confused natural logarithm ln with base-10 log factor 2.303"
+            }
             expl = f"For first-order, slope = -k. Here slope = {ys[1]:.2f}/60 = {-k:.4f}, so k = {k:.4f} min\u207b\u00b9."
             path = self._next_image_path("graph")
             finish_graph(fig, path)
-            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "First-order kinetics plot")
+            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "First-order kinetics plot", diagnostics=diag)
         elif family == "g_arrhenius":
             Ea_kJ = random.choice([50, 60, 75, 80, 100])
             slope = -Ea_kJ * 1000 / 8.314
@@ -624,11 +650,19 @@ class ImageQuestionEngine:
             ax.grid(alpha=0.3)
             question = "From the given Arrhenius plot (ln k vs 1/T), the activation energy Ea is closest to"
             correct = f"{Ea_kJ} kJ mol\u207b\u00b9"
-            distractors = [f"{Ea_kJ + 20} kJ mol\u207b\u00b9", f"{max(10, Ea_kJ - 20)} kJ mol\u207b\u00b9", f"{Ea_kJ * 2} kJ mol\u207b\u00b9"]
+            d1 = f"{Ea_kJ + 20} kJ mol\u207b\u00b9"
+            d2 = f"{max(10, Ea_kJ - 20)} kJ mol\u207b\u00b9"
+            d3 = f"{Ea_kJ * 2} kJ mol\u207b\u00b9"
+            distractors = [d1, d2, d3]
+            diag = {
+                d1: "Misconception: Inverted coordinate interval in 1/T axis calculation",
+                d2: "Misconception: Omitted conversion factor for Joules to kiloJoules (R = 8.314)",
+                d3: "Misconception: Multiplied by stoichiometric factor of 2 erroneously"
+            }
             expl = f"Slope = -Ea/R = {slope:.1f}. Ea = -slope \u00d7 8.314 J/mol = {Ea_kJ} kJ/mol."
             path = self._next_image_path("graph")
             finish_graph(fig, path)
-            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "Arrhenius plot")
+            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "Arrhenius plot", diagnostics=diag)
         elif family == "g_zero_order":
             A0 = random.choice([1.0, 1.2, 1.5, 2.0])
             k = random.choice([0.01, 0.02, 0.025])
@@ -642,11 +676,19 @@ class ImageQuestionEngine:
             ax.grid(alpha=0.3)
             question = "The plot represents a zero-order reaction [A] vs time. The initial rate of reaction is"
             correct = f"{k:.3f} mol L\u207b\u00b9 min\u207b\u00b9"
-            distractors = [f"{k*2:.3f} mol L\u207b\u00b9 min\u207b\u00b9", f"{k/2:.3f} mol L\u207b\u00b9 min\u207b\u00b9", f"{k*1.5:.3f} mol L\u207b\u00b9 min\u207b\u00b9"]
+            d1 = f"{k*2:.3f} mol L\u207b\u00b9 min\u207b\u00b9"
+            d2 = f"{k/2:.3f} mol L\u207b\u00b9 min\u207b\u00b9"
+            d3 = f"{k*1.5:.3f} mol L\u207b\u00b9 min\u207b\u00b9"
+            distractors = [d1, d2, d3]
+            diag = {
+                d1: "Misconception: Erroneously assumed first-order concentration doubling",
+                d2: "Misconception: Used half-life formula t_1/2 = A0/2k instead of initial rate",
+                d3: "Misconception: Inverted slope delta_y/delta_x ratio"
+            }
             expl = f"For zero-order, rate = k = -slope = {A0}/{t_end:.1f} = {k:.3f} mol/(L min)."
             path = self._next_image_path("graph")
             finish_graph(fig, path)
-            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "Zero-order decay plot")
+            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "Zero-order decay plot", diagnostics=diag)
         else:
             # First order two step
             t_half = random.choice([10, 15, 20, 25, 30])
@@ -660,10 +702,15 @@ class ImageQuestionEngine:
             question = f"In the first-order reaction shown, what percentage of reactant A has reacted after {3 * t_half} min?"
             correct = "87.5%"
             distractors = ["50%", "75%", "93.75%"]
+            diag = {
+                "50%": "Misconception: Evaluated at 1 half-life (50% remaining) instead of 3 half-lives",
+                "75%": "Misconception: Evaluated at 2 half-lives (75% reacted) instead of 3 half-lives",
+                "93.75%": "Misconception: Evaluated at 4 half-lives (93.75% reacted) instead of 3 half-lives"
+            }
             expl = f"t\u00bd = {t_half} min. At t = {3 * t_half} min (3 half-lives), fraction remaining = (1/2)\u00b3 = 1/8 = 12.5%, so reacted = 87.5%."
             path = self._next_image_path("graph")
             finish_graph(fig, path)
-            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "First-order multi-step plot")
+            q = self.assemble_image_question(question, correct, distractors, expl, path, "graph", "First-order multi-step plot", diagnostics=diag)
 
         return q
 
@@ -1036,6 +1083,44 @@ def export_docx(questions: list, output_path: str, topic="ALL", difficulty="Mode
     print(f"Word document exported to: {output_path}")
 
 
+def export_sft_dataset(questions: list, output_path: str = SFT_OUTPUT_JSONL) -> int:
+    """
+    Exports verified generated chemistry questions into JSONL format
+    compatible with Kaggle QLoRA fine-tuning notebooks.
+    Formula: D_aug = D_base U D_syn (CD-NS-KG-MAS Eq. 3)
+    """
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    count = 0
+    with open(output_path, "w", encoding="utf-8") as f:
+        for idx, q in enumerate(questions, 1):
+            q_text = str(q.get("question", ""))
+            opts = [f"({opt}) {q.get(f'option_{opt}', '')}" for opt in ["A", "B", "C", "D"] if q.get(f"option_{opt}")]
+            formatted_opts = "\n".join(opts) if opts else ""
+
+            prompt_input = f"{q_text}\n\nOptions:\n{formatted_opts}" if formatted_opts else q_text
+            completion = f"Explanation:\n{q.get('explanation', '')}\n\nCorrect Answer: ({q.get('correct_answer', '')})"
+
+            record = {
+                "instruction": "Solve the following JEE Main Chemistry examination question step-by-step and provide the scientifically verified correct answer.",
+                "input": prompt_input,
+                "output": completion,
+                "metadata": {
+                    "question_id": q.get("question_id", f"SYN_CHEM_{idx:03d}"),
+                    "topic": q.get("topic", q.get("image_family", "General Chemistry")),
+                    "difficulty": q.get("difficulty", "Hard"),
+                    "question_type": q.get("question_type", "MCQ"),
+                    "question_format": q.get("question_format", "MCQ"),
+                    "verification": q.get("verification", "computed"),
+                    "source": "CD-NS-KG-MAS Synthetic Augmentation",
+                    "distractor_diagnostics": q.get("distractor_diagnostics", {})
+                }
+            }
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            count += 1
+    print(f"SFT Synthetic Fine-Tuning dataset exported to: {output_path} ({count} records)")
+    return count
+
+
 # ==============================================================================
 # 5. MAIN AGENT 4 ORCHESTRATOR
 # ==============================================================================
@@ -1053,6 +1138,7 @@ class MultimodalChemistryAgent:
         image_count: int = None,
         topic: str = "ALL",
         difficulty: str = "Moderate",
+        question_format: str = "MCQ",
         kg_path: str = KG_PICKLE_PATH
     ) -> list:
         """Executes question generation plan."""
@@ -1070,10 +1156,10 @@ class MultimodalChemistryAgent:
             n_text = total_count - n_image
 
         print("\n" + "=" * 70)
-        print("AGENT 4: MULTIMODAL QUESTION GENERATION")
+        print("AGENT 4: MULTIMODAL QUESTION GENERATION (CD-NS-KG-MAS)")
         print("=" * 70)
         print(f"Total: {total_count} questions | Mode: {mode} | Text: {n_text} | Image: {n_image}")
-        print(f"Topic: {topic} | Target Difficulty: {difficulty}")
+        print(f"Topic: {topic} | Target Difficulty: {difficulty} | Format: {question_format}")
 
         all_questions = []
 
@@ -1083,6 +1169,40 @@ class MultimodalChemistryAgent:
             pool = self.image_engine.family_pool(topic)
             for idx in range(n_image):
                 q = self.image_engine.build_question(pool)
+                q["question_format"] = question_format
+                q["topic"] = topic if topic != "ALL" else q.get("image_family", "General Chemistry")
+                q["difficulty"] = difficulty
+
+                # Handle Assertion-Reason and Numerical Question Transformations
+                if question_format == "Assertion-Reason":
+                    q["question"] = (
+                        f"Given below are two statements:\n"
+                        f"Assertion (A): For the reaction/system shown, {q.get('question', '').lower().rstrip('.')}.\n"
+                        f"Reason (R): {q.get('explanation', '').split('.')[0]}.\n\n"
+                        f"In the light of the above statements, choose the correct answer from the options given below:"
+                    )
+                    q["option_A"] = "Both (A) and (R) are true and (R) is the correct explanation of (A)."
+                    q["option_B"] = "Both (A) and (R) are true but (R) is NOT the correct explanation of (A)."
+                    q["option_C"] = "(A) is true but (R) is false."
+                    q["option_D"] = "(A) is false but (R) is true."
+                    q["correct_answer"] = "A"
+                    q["distractor_diagnostics"] = {
+                        "A": "Scientifically verified correct Assertion-Reason explanation.",
+                        "B": "Misconception: Assumed Reason does not causally govern the Assertion.",
+                        "C": "Misconception: Discredited the scientifically valid theoretical Reason.",
+                        "D": "Misconception: Inverted truth values of reaction principles."
+                    }
+                elif question_format == "Numerical":
+                    raw_ans = str(q.get("correct_answer", "0"))
+                    num_match = re.search(r"[-+]?\d+", str(q.get(f"option_{raw_ans}", raw_ans)))
+                    int_val = int(num_match.group(0)) if num_match else 1
+                    q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
+                    q["correct_answer"] = str(int_val)
+                    q["option_A"] = ""
+                    q["option_B"] = ""
+                    q["option_C"] = ""
+                    q["option_D"] = ""
+
                 all_questions.append(q)
                 print(f"  [Image {idx+1}/{n_image}] Built {q.get('image_family')} -> Answer: ({q['correct_answer']})")
 
@@ -1135,6 +1255,12 @@ class MultimodalChemistryAgent:
 
         export_html(all_questions, AGENT4_OUTPUT_HTML, topic=topic, difficulty=difficulty)
         export_docx(all_questions, AGENT4_OUTPUT_DOCX, topic=topic, difficulty=difficulty)
+
+        # CD-NS-KG-MAS: Export SFT Fine-Tuning Dataset (JSONL)
+        try:
+            export_sft_dataset(all_questions, SFT_OUTPUT_JSONL)
+        except Exception as e:
+            print(f"Warning: SFT dataset export error: {e}")
 
         print("\n" + "=" * 70)
         print(f"GENERATION COMPLETED: {len(all_questions)} questions generated successfully!")

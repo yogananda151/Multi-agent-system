@@ -67,8 +67,79 @@ AGENT4_OUTPUT_PKL = os.path.join(OUTPUT_DIR, "generated_chemistry_questions.pkl"
 AGENT4_OUTPUT_HTML = os.path.join(OUTPUT_DIR, "generated_chemistry_questions.html")
 AGENT4_OUTPUT_DOCX = os.path.join(OUTPUT_DIR, "generated_chemistry_questions.docx")
 
+# Synthetic SFT Fine-Tuning outputs (CD-NS-KG-MAS)
+SFT_OUTPUT_JSONL = os.path.join(OUTPUT_DIR, "sft_synthetic.jsonl")
+SFT_AUGMENTED_TRAIN_JSONL = os.path.join(OUTPUT_DIR, "sft_augmented_train.jsonl")
+
 # Zipped archive output
 ZIP_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "chemistry_outputs")
+
+# ==============================================================================
+# CD-NS-KG-MAS SYLLABUS BOUNDARY PRUNING & CROSS-CHAPTER COUPLING
+# ==============================================================================
+# Topics deleted in official 2024-2026 JEE Main / NEET syllabus
+DELETED_SYLLABUS_TOPICS = {
+    "s-block elements",
+    "solid state",
+    "surface chemistry",
+    "general principles and processes of isolation of elements",
+    "metallurgy",
+    "polymers",
+    "chemistry in everyday life",
+    "environmental chemistry",
+    "states of matter",
+    "hydrogen",
+    "thomson and rutherford atomic models",
+}
+
+# Cross-chapter candidate pairings for Hard questions: C = {(u, v) in E | chapter(u) != chapter(v)}
+CROSS_CHAPTER_PAIRS = [
+    {
+        "pair_id": "X_THERMO_ELECTRO",
+        "chapter_A": "Thermodynamics",
+        "chapter_B": "Electrochemistry",
+        "concept_A": "Gibbs Free Energy (Delta G)",
+        "concept_B": "Standard Cell Potential (E_cell)",
+        "coupling_formula": "Delta G_standard = -n * F * E_cell_standard",
+        "description": "Coupling non-spontaneity with galvanic electromotive force"
+    },
+    {
+        "pair_id": "X_KINETICS_EQUILIBRIUM",
+        "chapter_A": "Chemical Kinetics",
+        "chapter_B": "Equilibrium",
+        "concept_A": "Arrhenius Activation Energy",
+        "concept_B": "Equilibrium Constant (Kc/Kp) & van 't Hoff shift",
+        "coupling_formula": "K_eq = k_forward / k_backward; d(ln K)/dT = Delta H / (R * T^2)",
+        "description": "Temperature dependence of forward/reverse rates and dynamic equilibrium"
+    },
+    {
+        "pair_id": "X_GOC_HALOALKANES",
+        "chapter_A": "General Organic Chemistry",
+        "chapter_B": "Haloalkanes and Haloarenes",
+        "concept_A": "Carbocation Hyperconjugation & Rearrangement",
+        "concept_B": "SN1 vs SN2 Nucleophilic Substitution Stereochemistry",
+        "coupling_formula": "Rate = k[R-X] for SN1 (racemization) vs Rate = k[R-X][Nu-] for SN2 (Walden inversion)",
+        "description": "Connecting electronic stability of intermediates with reaction kinetics & stereochemistry"
+    },
+    {
+        "pair_id": "X_BONDING_COORDINATION",
+        "chapter_A": "Chemical Bonding and Molecular Structure",
+        "chapter_B": "Coordination Compounds",
+        "concept_A": "VSEPR & Molecular Orbital Theory (MOT)",
+        "concept_B": "Crystal Field Splitting (Delta_o / Delta_t) & Spin State",
+        "coupling_formula": "mu_spin_only = sqrt(n(n+2)) BM",
+        "description": "Hybridization geometry coupled with d-orbital splitting and magnetic moments"
+    },
+    {
+        "pair_id": "X_SOLUTIONS_THERMO",
+        "chapter_A": "Solutions",
+        "chapter_B": "Thermodynamics",
+        "concept_A": "Colligative Properties & van 't Hoff Factor (i)",
+        "concept_B": "Entropy of Mixing & Gibbs Free Energy",
+        "coupling_formula": "Delta T_b = i * K_b * m; Delta G_mix = Delta H_mix - T * Delta S_mix",
+        "description": "Thermodynamic driving forces governing non-ideal solutions and Raoult's deviations"
+    }
+]
 
 # ==============================================================================
 # MODEL & GENERATION HYPERPARAMETERS

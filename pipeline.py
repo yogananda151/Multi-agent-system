@@ -95,6 +95,7 @@ class ChemistryMultiAgentPipeline:
         final_count = int(requirements.get("Number", 5))
         final_topic = requirements.get("Topic", "ALL")
         final_diff = requirements.get("Difficulty", "Moderate")
+        final_format = requirements.get("Question Type", "MCQ")
 
         questions = agent_4.generate(
             total_count=final_count,
@@ -102,6 +103,7 @@ class ChemistryMultiAgentPipeline:
             image_count=image_count,
             topic=final_topic,
             difficulty=final_diff,
+            question_format=final_format,
         )
 
         print("\n" + "=" * 70)

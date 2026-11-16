@@ -16,6 +16,8 @@ from config import (
     KG_PICKLE_PATH,
     AGENT2_OUTPUT_JSON,
     AGENT2_OUTPUT_PKL,
+    DELETED_SYLLABUS_TOPICS,
+    CROSS_CHAPTER_PAIRS,
 )
 from vector_store import ChemistryVectorStore
 
@@ -94,6 +96,30 @@ class HybridGraphRAGEngine:
         difficulty = str(requirements.get("Difficulty", "Moderate")).strip()
         num_requested = int(requirements.get("Number", 5))
 
+        # 0. Syllabus Boundary Pruning (CD-NS-KG-MAS)
+        pruned_notice = None
+        if topic.lower() in DELETED_SYLLABUS_TOPICS:
+            pruned_notice = f"Topic '{topic}' is excluded from the official 2024-2026 JEE Main syllabus. Redirecting to Chemical Kinetics."
+            print(f"\n[SYLLABUS FILTER] {pruned_notice}")
+            topic = "Chemical Kinetics"
+
+        # 1. Cross-Chapter Concept Coupling for Hard Questions (CD-NS-KG-MAS Eq. 2)
+        cross_chapter_info = None
+        if difficulty.lower() == "hard":
+            # Match cross-chapter pair C = {(u, v) in E | chapter(u) != chapter(v)}
+            for pair in CROSS_CHAPTER_PAIRS:
+                if (topic.lower() in pair["chapter_A"].lower()) or (topic.lower() in pair["chapter_B"].lower()):
+                    cross_chapter_info = pair
+                    break
+            if not cross_chapter_info:
+                # Default cross-chapter coupling if no exact topic match
+                cross_chapter_info = CROSS_CHAPTER_PAIRS[0]  # Thermo + Electro
+
+            print(f"\n[CROSS-CHAPTER COUPLING] Active for Hard Question Setting:")
+            print(f"  Coupling: {cross_chapter_info['chapter_A']} <---> {cross_chapter_info['chapter_B']}")
+            print(f"  Concepts: {cross_chapter_info['concept_A']} + {cross_chapter_info['concept_B']}")
+            print(f"  Formula : {cross_chapter_info['coupling_formula']}")
+
         print("\n" + "=" * 65)
         print("HYBRID GRAPHRAG RETRIEVAL ENGINE")
         print("=" * 65)
@@ -104,10 +130,14 @@ class HybridGraphRAGEngine:
 
         # Construct composite query for semantic search
         query_parts = []
-        if topic and topic.upper() != "ALL":
-            query_parts.append(f"Topic: {topic}")
-        if subtopic:
-            query_parts.append(f"Concept: {subtopic}")
+        if cross_chapter_info:
+            query_parts.append(f"Cross-chapter concepts: {cross_chapter_info['concept_A']} and {cross_chapter_info['concept_B']}")
+            query_parts.append(f"Formula: {cross_chapter_info['coupling_formula']}")
+        else:
+            if topic and topic.upper() != "ALL":
+                query_parts.append(f"Topic: {topic}")
+            if subtopic:
+                query_parts.append(f"Concept: {subtopic}")
         query_parts.append(f"{difficulty} level JEE Chemistry question with options and scientific explanation")
         semantic_query = ". ".join(query_parts)
 
@@ -160,6 +190,8 @@ class HybridGraphRAGEngine:
             "questions": selected_questions,
             "topic": topic,
             "difficulty": difficulty,
+            "cross_chapter_coupling": cross_chapter_info,
+            "syllabus_pruned_notice": pruned_notice,
         }
 
         # Save to output paths

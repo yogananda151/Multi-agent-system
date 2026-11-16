@@ -24,7 +24,7 @@ def package_outputs(output_dir=OUTPUT_DIR, zip_base_name=ZIP_OUTPUT_PATH):
     os.makedirs(staging_dir, exist_ok=True)
 
     target_extensions = (
-        ".pkl", ".pkp", ".docx", ".doc", ".html", ".htm", ".json", ".csv", ".txt"
+        ".pkl", ".pkp", ".docx", ".doc", ".html", ".htm", ".json", ".jsonl", ".csv", ".txt"
     )
     allowed_folders = ["generated_question_images", "chemistry_images"]
 

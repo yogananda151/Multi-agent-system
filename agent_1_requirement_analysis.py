@@ -7,10 +7,10 @@ import os
 import re
 import json
 import argparse
-from config import AGENT1_REQUIREMENTS_PATH, DATASET_NAME, DATASET_CONFIG
+from config import AGENT1_REQUIREMENTS_PATH, DATASET_NAME, DATASET_CONFIG, DELETED_SYLLABUS_TOPICS
 
-# Default Chemistry broad topics for JEE Main
-DEFAULT_TOPICS = [
+# Default Chemistry broad topics for official 2024-2026 JEE Main syllabus (pruned)
+RAW_DEFAULT_TOPICS = [
     "Chemical Bonding and Molecular Structure",
     "Coordination Compounds",
     "Thermodynamics",
@@ -29,11 +29,11 @@ DEFAULT_TOPICS = [
     "Aldehydes, Ketones and Carboxylic Acids",
     "Amines",
     "Biomolecules",
-    "Surface Chemistry",
-    "States of Matter",
     "Redox Reactions",
-    "Solid State",
 ]
+
+# Strictly prune any deleted syllabus chapters
+DEFAULT_TOPICS = [t for t in RAW_DEFAULT_TOPICS if t.lower() not in DELETED_SYLLABUS_TOPICS]
 
 DEFAULT_SUBTOPICS = [
     "VSEPR Theory", "Hybridisation", "Molecular Orbital Theory",
@@ -102,10 +102,12 @@ class RequirementAnalysisAgent:
                 number = 5  # default if not specified
 
         # 2. EXTRACT QUESTION TYPE
-        if re.search(r"\b(mcq|mcqs|multiple choice|objective|single correct)\b", request):
-            question_type = "MCQ"
-        elif re.search(r"\b(numerical|numericals|integer type|integer)\b", request):
+        if re.search(r"\b(assertion[- ]reason|assertion and reason|assertion)\b", request):
+            question_type = "Assertion-Reason"
+        elif re.search(r"\b(numerical|numericals|integer type|integer|section b)\b", request):
             question_type = "Numerical"
+        elif re.search(r"\b(mcq|mcqs|multiple choice|objective|single correct)\b", request):
+            question_type = "MCQ"
         elif re.search(r"\b(fill in the blank|fill-in-the-blank)\b", request):
             question_type = "Fill in the Blank"
         elif re.search(r"\b(true or false|true/false)\b", request):

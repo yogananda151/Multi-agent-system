@@ -1,40 +1,31 @@
 {
     "questions": [
         {
-            "question": "In the first-order reaction shown, what percentage of reactant A has reacted after 30 min?",
-            "option_A": "50%",
-            "option_B": "93.75%",
-            "option_C": "75%",
-            "option_D": "87.5%",
-            "correct_answer": "D",
-            "explanation": "t½ = 10 min. At t = 30 min (3 half-lives), fraction remaining = (1/2)³ = 1/8 = 12.5%, so reacted = 87.5%.",
+            "question": "In the first-order reaction shown, what percentage of reactant A has reacted after 90 min? [Answer in nearest integer]",
+            "option_A": "",
+            "option_B": "",
+            "option_C": "",
+            "option_D": "",
+            "correct_answer": "87",
+            "explanation": "t½ = 30 min. At t = 90 min (3 half-lives), fraction remaining = (1/2)³ = 1/8 = 12.5%, so reacted = 87.5%.",
             "question_type": "image",
+            "question_format": "Numerical",
             "image_type": "graph",
             "image_description": "First-order multi-step plot",
-            "generated_image": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_001.png",
-            "image_path": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_001.png",
-            "source": "image_generator",
-            "difficulty_category": "computed_image",
-            "verification": "computed",
-            "image_family": "g_zero_order_two_step"
-        },
-        {
-            "question": "From the given Arrhenius plot (ln k vs 1/T), the activation energy Ea is closest to",
-            "option_A": "55 kJ mol⁻¹",
-            "option_B": "75 kJ mol⁻¹",
-            "option_C": "95 kJ mol⁻¹",
-            "option_D": "150 kJ mol⁻¹",
-            "correct_answer": "B",
-            "explanation": "Slope = -Ea/R = -9020.9. Ea = -slope × 8.314 J/mol = 75 kJ/mol.",
-            "question_type": "image",
-            "image_type": "graph",
-            "image_description": "Arrhenius plot",
             "generated_image": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_002.png",
             "image_path": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_002.png",
             "source": "image_generator",
             "difficulty_category": "computed_image",
             "verification": "computed",
-            "image_family": "g_arrhenius"
+            "distractor_diagnostics": {
+                "A": "Misconception: Evaluated at 1 half-life (50% remaining) instead of 3 half-lives",
+                "B": "Scientifically verified correct answer path.",
+                "C": "Misconception: Evaluated at 2 half-lives (75% reacted) instead of 3 half-lives",
+                "D": "Misconception: Evaluated at 4 half-lives (93.75% reacted) instead of 3 half-lives"
+            },
+            "image_family": "g_zero_order_two_step",
+            "topic": "Chemical Kinetics",
+            "difficulty": "Moderate"
         }
     ]
 }

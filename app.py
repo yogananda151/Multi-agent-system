@@ -30,6 +30,8 @@ from config import (
     AGENT4_OUTPUT_JSON,
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
+    SFT_OUTPUT_JSONL,
+    CROSS_CHAPTER_PAIRS,
 )
 from agent_1_requirement_analysis import DEFAULT_TOPICS, DEFAULT_SUBTOPICS
 
@@ -180,9 +182,18 @@ if app_mode == "🚀 Multimodal Question Generator":
         else:
             sel_topic = st.selectbox("Chemistry Topic:", DEFAULT_TOPICS, index=3) # Chemical Kinetics
             sel_diff = st.select_slider("Target Difficulty:", options=DIFFICULTIES, value="Moderate")
+            sel_format = st.selectbox("Question Pattern (CD-NS-KG-MAS):", ["MCQ (Single Choice)", "Assertion-Reason", "Numerical Integer (Section B)"], index=0)
             sel_count = st.slider("Question Count:", min_value=1, max_value=15, value=3)
             mode_choice = st.selectbox("Modality:", ["image", "mixed", "text"], index=0)
-            user_prompt = f"Generate {sel_count} {sel_diff.lower()} MCQs on {sel_topic}"
+
+            fmt_code = "MCQ"
+            if "Assertion" in sel_format: fmt_code = "Assertion-Reason"
+            elif "Numerical" in sel_format: fmt_code = "Numerical"
+
+            if sel_diff == "Hard":
+                st.info("🔗 **Cross-Chapter Coupling Active**: Multi-concept pairing across chapters (e.g., Kinetics + Equilibrium or Thermo + Electro) enabled for Hard questions.")
+
+            user_prompt = f"Generate {sel_count} {sel_diff.lower()} {fmt_code} questions on {sel_topic}"
 
         generate_btn = st.button("🚀 Synthesize Questions with Multi-Agent Pipeline", type="primary", use_container_width=True)
 
@@ -233,7 +244,7 @@ if app_mode == "🚀 Multimodal Question Generator":
             st.subheader(f"📋 Generated Examination Set ({len(saved_questions)} Questions)")
 
             # Export action bar
-            exp_c1, exp_c2, exp_c3, exp_c4 = st.columns(4)
+            exp_c1, exp_c2, exp_c3, exp_c4, exp_c5 = st.columns(5)
             with exp_c1:
                 if os.path.exists(AGENT4_OUTPUT_HTML):
                     with open(AGENT4_OUTPUT_HTML, "r", encoding="utf-8") as f:
@@ -246,6 +257,10 @@ if app_mode == "🚀 Multimodal Question Generator":
                 with open(AGENT4_OUTPUT_JSON, "r", encoding="utf-8") as f:
                     st.download_button("💾 Download JSON", f.read(), "chemistry_questions.json", "application/json", use_container_width=True)
             with exp_c4:
+                if os.path.exists(SFT_OUTPUT_JSONL):
+                    with open(SFT_OUTPUT_JSONL, "r", encoding="utf-8") as f:
+                        st.download_button("🧠 Download SFT JSONL", f.read(), "sft_synthetic.jsonl", "application/jsonl", use_container_width=True)
+            with exp_c5:
                 zip_path = f"{ZIP_OUTPUT_PATH}.zip"
                 if not os.path.exists(zip_path):
                     try:
@@ -263,6 +278,7 @@ if app_mode == "🚀 Multimodal Question Generator":
                 q_topic = q.get('topic') or q.get('image_family') or 'Chemistry'
                 q_diff = q.get('difficulty') or q.get('difficulty_category') or 'Moderate'
                 q_mode = q.get('question_type') or q.get('mode') or 'image'
+                q_fmt = q.get('question_format') or 'MCQ'
                 q_id = q.get('question_id') or f"CHEM_Q{idx:02d}"
 
                 st.markdown(f"""
@@ -270,8 +286,9 @@ if app_mode == "🚀 Multimodal Question Generator":
                     <span class="badge-topic">{q_topic}</span>
                     <span class="badge-diff">{q_diff}</span>
                     <span class="badge-rag">{str(q_mode).upper()}</span>
+                    <span class="badge-rag" style="background-color:#E0F2F1;color:#00796B;">{str(q_fmt).upper()}</span>
                     <h4 style="margin-top:12px;">Question {idx}: {q_id}</h4>
-                    <p style="font-size:1.1rem;line-height:1.6;">{q.get('question', '')}</p>
+                    <p style="font-size:1.1rem;line-height:1.6;white-space:pre-line;">{q.get('question', '')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -285,25 +302,38 @@ if app_mode == "🚀 Multimodal Question Generator":
                         st.info("ℹ️ Text-only question (no visual diagram required).")
 
                 with col_opts:
-                    st.markdown("**Options:**")
-                    opts = q.get("options")
-                    if not opts or not isinstance(opts, dict):
-                        opts = {
-                            "A": q.get("option_A", "N/A"),
-                            "B": q.get("option_B", "N/A"),
-                            "C": q.get("option_C", "N/A"),
-                            "D": q.get("option_D", "N/A"),
-                        }
-                    correct_key = q.get("correct_answer", "").strip().upper()
+                    if q_fmt == "Numerical":
+                        st.markdown(f"**Section B Numerical Integer Answer:** `{q.get('correct_answer', '')}`")
+                    else:
+                        st.markdown("**Options:**")
+                        opts = q.get("options")
+                        if not opts or not isinstance(opts, dict):
+                            opts = {
+                                "A": q.get("option_A", "N/A"),
+                                "B": q.get("option_B", "N/A"),
+                                "C": q.get("option_C", "N/A"),
+                                "D": q.get("option_D", "N/A"),
+                            }
+                        correct_key = q.get("correct_answer", "").strip().upper()
 
-                    for opt_key, opt_text in opts.items():
-                        is_correct = (opt_key.upper() == correct_key)
-                        opt_class = "option-box correct-option" if is_correct else "option-box"
-                        st.markdown(f'<div class="{opt_class}"><b>({opt_key})</b> {opt_text} {" ✅ [Correct Answer]" if is_correct else ""}</div>', unsafe_allow_html=True)
+                        for opt_key, opt_text in opts.items():
+                            if not opt_text or opt_text == "N/A": continue
+                            is_correct = (opt_key.upper() == correct_key)
+                            opt_class = "option-box correct-option" if is_correct else "option-box"
+                            st.markdown(f'<div class="{opt_class}"><b>({opt_key})</b> {opt_text} {" ✅ [Correct Answer]" if is_correct else ""}</div>', unsafe_allow_html=True)
 
                     with st.expander("💡 View Detailed Explanation & Mechanism"):
                         st.write(q.get("explanation", "No explanation provided."))
-                        st.write(q.get("explanation", "No explanation provided."))
+
+                    # CD-NS-KG-MAS: Misconception Diagnostics Panel
+                    diags = q.get("distractor_diagnostics")
+                    if diags and isinstance(diags, dict):
+                        with st.expander("🎯 Misconception Diagnostics (CD-NS-KG-MAS)"):
+                            for opt_letter, reason in sorted(diags.items()):
+                                if "verified" in reason.lower() or opt_letter == q.get("correct_answer"):
+                                    st.markdown(f"**({opt_letter})** 🟢 :green[{reason}]")
+                                else:
+                                    st.markdown(f"**({opt_letter})** 🔴 :orange[{reason}]")
 
 
 # ==============================================================================
@@ -410,6 +440,17 @@ elif app_mode == "🧠 Hybrid GraphRAG Inspector":
             context = rag.retrieve(req, top_k=sim_count)
 
         st.success(f"Retrieved {len(context.get('questions', []))} exemplar questions via {context.get('retrieval_method')}")
+
+        cross_coupling = context.get("cross_chapter_coupling")
+        if cross_coupling:
+            st.markdown(f"""
+            <div style="background-color:#EDE7F6;border-left:5px solid #673AB7;padding:12px;margin:10px 0;border-radius:6px;">
+                <b style="color:#4527A0;">🔗 CD-NS-KG-MAS Cross-Chapter Coupling Active (Eq. 2):</b><br>
+                <b>Chapter A:</b> {cross_coupling['chapter_A']} ({cross_coupling['concept_A']}) &nbsp;⚡&nbsp; 
+                <b>Chapter B:</b> {cross_coupling['chapter_B']} ({cross_coupling['concept_B']})<br>
+                <small><b>Governing Formula:</b> <code>{cross_coupling['coupling_formula']}</code> | {cross_coupling['description']}</small>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("#### 1. Retrieved Exemplar Questions (Used by Agent 3 for Few-Shot In-Context Learning):")
         for q in context.get("questions", []):

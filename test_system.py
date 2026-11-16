@@ -95,6 +95,51 @@ class TestChemistrySystem(unittest.TestCase):
         self.assertEqual(len(qs), 2)
         print("\n[PASS] End-to-end Master Pipeline passed.")
 
+    def test_07_cd_ns_kg_mas_cross_chapter_and_diagnostics(self):
+        """Test CD-NS-KG-MAS cross-chapter coupling, distractor diagnostics, and SFT dataset export."""
+        rag = HybridGraphRAGEngine()
+        reqs = {"Topic": "Chemical Kinetics", "Difficulty": "Hard", "Number": 2}
+        context = rag.retrieve(reqs, top_k=2)
+        self.assertIsNotNone(context.get("cross_chapter_coupling"))
+        self.assertEqual(context["cross_chapter_coupling"]["pair_id"], "X_KINETICS_EQUILIBRIUM")
+        rag.close()
+
+        # Test generation with diagnostics and SFT export
+        agent4 = MultimodalChemistryAgent()
+        qs = agent4.generate(total_count=2, mode="image", topic="Chemical Kinetics", difficulty="Hard")
+        self.assertEqual(len(qs), 2)
+        self.assertIn("distractor_diagnostics", qs[0])
+        self.assertGreater(len(qs[0]["distractor_diagnostics"]), 0)
+
+        # Verify SFT JSONL dataset
+        from config import SFT_OUTPUT_JSONL
+        self.assertTrue(os.path.exists(SFT_OUTPUT_JSONL))
+        with open(SFT_OUTPUT_JSONL, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        self.assertGreaterEqual(len(lines), 1)
+        record = json.loads(lines[0])
+        self.assertIn("instruction", record)
+        self.assertIn("input", record)
+        self.assertIn("output", record)
+        print("\n[PASS] CD-NS-KG-MAS Cross-Chapter coupling, Distractor Diagnostics & SFT JSONL passed.")
+
+    def test_08_multi_format_generation(self):
+        """Test Assertion-Reason and Numerical Integer question generation."""
+        agent4 = MultimodalChemistryAgent()
+        # Assertion-Reason format
+        qs_ar = agent4.generate(total_count=1, mode="image", topic="Chemical Kinetics", question_format="Assertion-Reason")
+        self.assertEqual(len(qs_ar), 1)
+        self.assertIn("Assertion (A)", qs_ar[0]["question"])
+        self.assertIn("Reason (R)", qs_ar[0]["question"])
+        self.assertEqual(qs_ar[0]["correct_answer"], "A")
+
+        # Numerical Integer format
+        qs_num = agent4.generate(total_count=1, mode="image", topic="Chemical Kinetics", question_format="Numerical")
+        self.assertEqual(len(qs_num), 1)
+        self.assertIn("integer", qs_num[0]["question"].lower())
+        self.assertTrue(qs_num[0]["correct_answer"].isdigit() or qs_num[0]["correct_answer"].lstrip("-").isdigit())
+        print("\n[PASS] Multi-format (Assertion-Reason & Numerical) question generation passed.")
+
 
 if __name__ == "__main__":
     unittest.main()
