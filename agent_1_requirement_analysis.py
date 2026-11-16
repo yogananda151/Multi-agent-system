@@ -89,7 +89,9 @@ class RequirementAnalysisAgent:
         request = user_request.lower().strip()
 
         # 1. EXTRACT NUMBER
-        number_match = re.search(r"\b(\d+)\s*(?:questions?|mcqs?|problems?)\b", request)
+        number_match = re.search(r"\b(\d+)\s+(?:[a-zA-Z-]+\s+)*(?:questions?|mcqs?|problems?)\b", request)
+        if not number_match:
+            number_match = re.search(r"\b(\d+)\s*(?:questions?|mcqs?|problems?)\b", request)
         if number_match:
             number = int(number_match.group(1))
         else:

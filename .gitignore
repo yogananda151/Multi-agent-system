@@ -10,3 +10,7 @@ __pycache__/
 venv/
 env/
 .env
+
+# Database lock files
+*.lock
+

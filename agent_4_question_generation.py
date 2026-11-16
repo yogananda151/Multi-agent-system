@@ -189,6 +189,17 @@ TEXT_REFERS_TO_IMAGE = re.compile(
 )
 
 
+def check_rdkit_available():
+    try:
+        from rdkit import Chem
+        m = Chem.MolFromSmiles("CC")
+        return m is not None
+    except Exception:
+        return False
+
+HAS_RDKIT_WORKING = check_rdkit_available()
+
+
 # ==============================================================================
 # 2. IMAGE QUESTION ENGINE (RDKit + Matplotlib programmatic questions)
 # ==============================================================================
@@ -202,6 +213,36 @@ class ImageQuestionEngine:
         self.used_keys = set()
         self.used_molecules = set()
         self.family_use = Counter()
+        self.cached_questions = []
+        self._load_cached_image_questions()
+
+    def _load_cached_image_questions(self):
+        """Loads existing verified multimodal questions as a resilient offline backup."""
+        if os.path.exists(AGENT4_OUTPUT_JSON):
+            try:
+                with open(AGENT4_OUTPUT_JSON, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for q in data.get("questions", []):
+                    if q.get("question_type") == "image":
+                        self.cached_questions.append(q)
+            except Exception:
+                pass
+
+    def get_cached_molecular_question(self):
+        """Returns a verified pre-computed question with local image path."""
+        if self.cached_questions:
+            choice = random.choice(self.cached_questions)
+            item = dict(choice)
+            img = item.get("generated_image") or item.get("image_path", "")
+            if img:
+                base_img = os.path.basename(img)
+                local_img = os.path.join(self.image_folder, base_img)
+                if os.path.exists(local_img):
+                    item["generated_image"] = local_img
+                    item["image_path"] = local_img
+            return item
+        return None
+
 
     def _next_image_path(self, prefix: str) -> str:
         self.image_counter += 1
@@ -636,8 +677,18 @@ class ImageQuestionEngine:
             return INORGANIC_FAMS
         return ORGANIC_FAMS + INORGANIC_FAMS + GRAPH_FAMS
 
-    def build_question(self, pool: list, max_tries: int = 300) -> dict:
-        """Draws and generates an image question from the pool."""
+    def build_question(self, pool: list, max_tries: int = 50) -> dict:
+        """Draws and generates an image question from the pool with safe fallbacks."""
+        if not HAS_RDKIT_WORKING:
+            graph_subset = [f for f in pool if f in GRAPH_FAMS]
+            if not graph_subset:
+                cached = self.get_cached_molecular_question()
+                if cached:
+                    return cached
+                pool = GRAPH_FAMS
+            else:
+                pool = graph_subset
+
         for attempt in range(max_tries):
             family = random.choice(pool)
             try:
@@ -653,9 +704,15 @@ class ImageQuestionEngine:
             except Exception:
                 continue
 
-        # If exhausted, reset used keys and retry
-        self.used_keys.clear()
-        return self.build_question(pool, max_tries=50)
+        # If exhausted, try cached molecular question or render kinetics curve
+        cached = self.get_cached_molecular_question()
+        if cached:
+            return cached
+        family = random.choice(GRAPH_FAMS)
+        q = self.build_graph(family)
+        q["image_family"] = family
+        return q
+
 
 
 # ==============================================================================

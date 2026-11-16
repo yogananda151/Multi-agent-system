@@ -2,12 +2,14 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
-[![Transformers](https://img.shields.io/badge/Transformers-HuggingFace-orange.svg)](https://huggingface.co/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20Store-dc2626.svg)](https://qdrant.tech/)
+[![FastEmbed](https://img.shields.io/badge/FastEmbed-BGE--small-0284c7.svg)](https://github.com/qdrant/fastembed)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Web%20Dashboard-ff4b4b.svg)](https://streamlit.io/)
 [![RDKit](https://img.shields.io/badge/RDKit-Cheminformatics-green.svg)](https://www.rdkit.org/)
 [![NetworkX](https://img.shields.io/badge/NetworkX-Knowledge%20Graph-blueviolet.svg)](https://networkx.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An end-to-end, neuro-symbolic AI framework designed to generate examination-grade Chemistry Multiple-Choice Questions (MCQs) for competitive entrance examinations (**JEE Main / NEET**). The system combines a **top-down directed Knowledge Graph**, a **collaborative 5-agent pipeline**, **dual synthesis engines (RDKit & LLM)**, and a **deep learning vision suite (U-Net denoising + Swin Transformer similarity detection)** to produce mathematically verified, syllabus-aligned, and multimodal chemistry questions.
+An end-to-end, neuro-symbolic AI framework designed to generate examination-grade Chemistry Multiple-Choice Questions (MCQs) for competitive entrance examinations (**JEE Main / NEET**). The system combines an authoritative **symbolic Knowledge Graph**, an embedded **Tri-Modal Qdrant Vector Store**, an ONNX-accelerated **FastEmbed dense semantic retrieval engine**, a **collaborative 4-agent pipeline**, **dual synthesis engines (RDKit & Matplotlib)**, a **deep learning vision suite (U-Net denoising + Swin Transformer similarity detection)**, and an interactive **Streamlit Web Studio** to produce mathematically verified, syllabus-aligned, and multimodal chemistry questions.
 
 ---
 
@@ -25,11 +27,17 @@ While modern Large Language Models (LLMs) can generate text rapidly, applying na
 6. **Degraded Historical Assets**: Scanned exam diagrams in past-year archives frequently contain artifacts, blurriness, or low contrast that impair machine learning processing.
 
 ### 🎯 Our Solution
-To overcome these limitations, we propose a **Neuro-Symbolic, Multi-Agent Architecture**:
+To overcome these limitations, we propose a **Neuro-Symbolic, Multi-Agent Architecture with Tri-Modal Hybrid GraphRAG**:
 - **Symbolic Grounding**: A top-down **Knowledge Graph** acts as an authoritative single source of truth for the curriculum (Subject $\to$ Chapter $\to$ Topic $\to$ Subtopic $\to$ Concepts).
-- **Specialized Multi-Agent Orchestration**: Deconstructs question setting into discrete cognitive tasks: requirement parsing, graph retrieval, exam-format prompt engineering, synthesis, and self-verification.
+- **Tri-Modal Vector Store (Qdrant)**: High-speed local embedded vector database maintaining 3 specialized collections:
+  1. `chemistry_questions`: 384-D dense semantic embeddings via FastEmbed (`BAAI/bge-small-en-v1.5`) across 794 official questions.
+  2. `diagram_embeddings`: 128-D Swin Transformer vision features across 2,005 examination diagrams.
+  3. `molecular_structures`: 1024-D chemical structure fingerprints from RDKit and Morgan/SMILES n-gram hashing.
+- **Hybrid GraphRAG Engine**: Fuses symbolic Knowledge Graph traversal with dense vector retrieval using **Reciprocal Rank Fusion (RRF, $k=60$)**, delivering perfectly matched few-shot exemplars with zero syllabus drift.
+- **Specialized Multi-Agent Orchestration**: Deconstructs question setting into discrete cognitive tasks: requirement parsing, GraphRAG retrieval, exam-format prompt engineering, synthesis, and self-verification.
 - **Deterministic Multimodal Graphics**: Algorithmic generation via **RDKit** and **Matplotlib** ensures that 100% of molecular structures, VSEPR geometries, and kinetics curves have verified ground truth.
 - **Deep Learning Vision Verification**: A custom **U-Net** denoises historical diagrams, while a **Swin Transformer + Feature MLP + Sinkhorn Optimal Transport** pipeline detects and filters duplicate visual concepts.
+- **Interactive Web Studio**: Full-featured **Streamlit dashboard** for real-time synthesis, vector search playground, GraphRAG inspection, and one-click multi-format exporting.
 
 ---
 
@@ -196,6 +204,11 @@ Detailed in [`Unet+Swin.ipynb`](Unet+Swin.ipynb):
 | Domain | Library / Tool | Version / Specification | Role in the Project |
 |---|---|---|---|
 | **Multi-Agent Orchestration** | Custom Modular Python | Python 3.10+ | Decoupled agent communication via typed JSON state files |
+| **Vector Database** | `qdrant-client` | $\ge 1.18.0$ | Embedded local vector store hosting 3 specialized collections |
+| **Dense Text Embeddings** | `fastembed` | `BAAI/bge-small-en-v1.5` | High-speed 384-D ONNX-accelerated dense semantic vectors |
+| **Hybrid GraphRAG Fusion** | Custom RRF Engine | $k=60$ Rank Fusion | Combines symbolic ontology with dense semantic search |
+| **Web Dashboard** | `streamlit` | $\ge 1.30.0$ | Interactive 4-mode Web Studio for real-time synthesis & search |
+| **Automated Testing** | `unittest` | Python Built-in | 6-phase end-to-end system test suite |
 | **Knowledge Representation** | `networkx` | $\ge 3.0$ | Directed multigraph representing hierarchical syllabus ontology |
 | **Graph Visualization** | `pyvis` | $\ge 0.3.2$ | Physics-based dynamic HTML graph visualization |
 | **Fuzzy Semantic Search** | `rapidfuzz` | $\ge 3.0.0$ | Levenshtein/Jaro-Winkler concept matching for topic resolution |
@@ -216,11 +229,16 @@ Detailed in [`Unet+Swin.ipynb`](Unet+Swin.ipynb):
 
 ```text
 Multi-agent-system/
+├── app.py                            # Streamlit Web Studio: 4 interactive modes & export center
+├── pipeline.py                       # Orchestrator: Runs Agent 1 → 2 → 3 → 4 in an automated pipeline
+├── test_system.py                    # Automated test suite (6 end-to-end integration & unit tests)
 ├── agent_1_requirement_analysis.py   # Agent 1: NLP user request parser into structured requirements
 ├── agent_2_kg_retrieval.py          # Agent 2: Traverses Knowledge Graph & extracts syllabus exemplars
+├── hybrid_graph_rag.py               # Hybrid GraphRAG Engine: Fuses symbolic KG + Qdrant vectors + RRF
+├── vector_store.py                   # Tri-Modal Qdrant Vector Store (dense, diagram, molecular collections)
+├── populate_vector_db.py             # Ingestion & vector indexing script for Qdrant database
 ├── agent_3_prompt_construction.py    # Agent 3: Assembles few-shot prompts with strict JEE Main guardrails
 ├── agent_4_question_generation.py    # Agent 4: Multimodal generator (RDKit, Matplotlib, LLM, verification)
-├── pipeline.py                       # Orchestrator: Runs Agent 1 → 2 → 3 → 4 in an automated pipeline
 ├── knowledge_graph.py                # Constructs top-down NetworkX graph and PyVis interactive HTML
 ├── data_preprocessing.py             # Preprocessing & cleaning of eQOURSE JEE Main Chemistry dataset
 ├── export_outputs.py                 # Bundles outputs into Word DOCX, interactive HTML, JSON, and ZIP
@@ -230,6 +248,14 @@ Multi-agent-system/
 ├── Unet+Swin.ipynb                   # Deep learning vision notebook: U-Net denoising & Swin Transformer
 ├── Report.pdf                        # Formal academic project technical report
 ├── outputs/                          # Generated outputs directory
+│   ├── qdrant_db/                    # Local embedded Qdrant vector database storage
+│   ├── chemistry_images/             # Preprocessed & denoised chemical diagrams
+│   ├── generated_question_images/    # Algorithmic Matplotlib & RDKit synthesized diagrams
+│   ├── generated_chemistry_questions.json
+│   ├── generated_chemistry_questions.html
+│   ├── generated_chemistry_questions.docx
+│   └── chemistry_outputs.zip         # Packaged release archive
+```
 │   ├── chemistry_knowledge_graph.html# Interactive Knowledge Graph visualization
 │   ├── chemistry_swin_mlp_features.csv# 128-D visual feature vectors for question images
 │   ├── generated_chemistry_questions.json # Generated questions with ground-truth keys
@@ -274,8 +300,36 @@ pip install -r requirements.txt
 
 ## 💻 Usage Guide
 
-### 1. Run the Full End-to-End Pipeline
-Generate a complete batch of questions with a single command:
+### 🌟 Option 1: Launch the Interactive Web Dashboard (Recommended)
+
+Experience the entire system through an interactive, modern Streamlit Web Studio:
+
+```bash
+# Launch the Web Studio
+streamlit run app.py
+```
+
+The Web Studio opens in your browser at `http://localhost:8501` and features **4 Dedicated Modes**:
+1. **🚀 Multimodal Question Generator**:
+   - Synthesize questions via Natural Language prompts or structured dropdown controls.
+   - Live visual execution tracker (Agent 1 $\to$ Agent 2 GraphRAG $\to$ Agent 3 $\to$ Agent 4).
+   - Rendered question cards with KaTeX formulas, chemical options, correct answers, step-by-step chemical mechanisms, and visual diagram previews.
+   - One-click downloads for HTML, Microsoft Word DOCX, JSON, and release ZIP archives.
+2. **🔍 Tri-Modal Vector DB Search**:
+   - Live query interface across all 3 Qdrant collections: 384-D questions, 128-D Swin Transformer vision embeddings, and 1024-D molecular fingerprints.
+   - Real-time cosine similarity scores and payload attributes.
+3. **🧠 Hybrid GraphRAG Inspector**:
+   - Examine how the Symbolic Knowledge Graph triples fuse with Qdrant Dense Vector Search using Reciprocal Rank Fusion ($k=60$).
+   - Live preview of retrieved exemplars and prompt synthesis.
+4. **📊 System Architecture & Metrics**:
+   - Comprehensive diagram of the multi-agent pipeline and detailed research metrics.
+
+---
+
+### 🚀 Option 2: Run the Full End-to-End Pipeline CLI
+
+Generate a complete batch of questions directly from the command line:
+
 ```bash
 # Fast algorithmic multimodal image questions (Chemical Kinetics)
 python pipeline.py --request "Generate 5 moderate MCQs on Chemical Kinetics" --mode image
@@ -296,7 +350,25 @@ python pipeline.py --interactive
 
 ---
 
-### 2. Run Individual Agents Separately
+### 🧪 Option 3: Run the Automated System Verification Suite
+
+Run the full end-to-end unit test suite to verify all agents, the Qdrant vector database, GraphRAG retrieval, and file exporters:
+
+```bash
+python -m unittest test_system.py
+```
+
+Tests run:
+- `test_01_agent_1_requirement_parsing`: Regex & natural language prompt analysis.
+- `test_02_vector_store_collections`: Qdrant 3-collection health, FastEmbed dense query, and stats.
+- `test_03_hybrid_graph_rag_engine`: Dense + lexical Reciprocal Rank Fusion ranking.
+- `test_04_agent_3_prompt_construction`: Structured prompt synthesis & few-shot injection.
+- `test_05_agent_4_multimodal_generation`: Deterministic diagram rendering & JSON/HTML/DOCX export.
+- `test_06_end_to_end_pipeline`: Master pipeline orchestration from query to multi-format outputs.
+
+---
+
+### 🧩 Option 4: Run Individual Agents Separately
 Each agent can be executed independently for debugging or modular pipelines:
 
 ```bash
@@ -304,7 +376,7 @@ Each agent can be executed independently for debugging or modular pipelines:
 python agent_1_requirement_analysis.py --request "10 questions on Chemical Kinetics, moderate"
 # Produces: outputs/requirements.json
 
-# Step 2: Retrieve from Knowledge Graph
+# Step 2: Retrieve from Knowledge Graph via Hybrid GraphRAG
 python agent_2_kg_retrieval.py --requirements outputs/requirements.json
 # Produces: outputs/kg_retrieved_context.json
 
@@ -319,16 +391,19 @@ python agent_4_question_generation.py --count 5 --mode image --topic "Chemical K
 
 ---
 
-### 3. Utility Modules
+### 🛠️ Option 5: Utility & Database Modules
 
 ```bash
+# Populate or re-index the Qdrant Tri-Modal Vector Database
+python populate_vector_db.py
+
 # Clean raw dataset
 python data_preprocessing.py
 
-# Build and visualize Knowledge Graph
+# Build and visualize Knowledge Graph (interactive HTML)
 python knowledge_graph.py --visualize
 
-# Package all generated assets into ZIP
+# Package all generated assets into ZIP archive
 python export_outputs.py
 ```
 

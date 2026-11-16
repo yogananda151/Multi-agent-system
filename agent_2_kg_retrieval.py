@@ -19,6 +19,8 @@ from config import (
     AGENT2_OUTPUT_PKL,
 )
 from knowledge_graph import ChemistryKnowledgeGraph
+from hybrid_graph_rag import HybridGraphRAGEngine
+
 
 
 def fuzzy_score(a, b):
@@ -54,14 +56,22 @@ def normalize_text(value):
 
 
 class KnowledgeGraphRetrievalAgent:
-    """Agent 2: Retrieves relevant chemistry questions and concepts from the Knowledge Graph."""
+    """Agent 2: Retrieves relevant chemistry questions and concepts using Hybrid GraphRAG."""
 
     def __init__(self, graph=None, kg_path=KG_PICKLE_PATH):
         self.kg_path = kg_path
+        self.hybrid_engine = None
+        try:
+            self.hybrid_engine = HybridGraphRAGEngine()
+        except Exception as e:
+            print(f"Hybrid GraphRAG initialization note: {e}")
+
         if graph is not None:
             self.graph = graph
-        else:
+        elif os.path.exists(self.kg_path):
             self.graph = self._load_graph()
+        else:
+            self.graph = None
 
     def _load_graph(self):
         """Loads graph from pickle file or builds it if absent."""
@@ -73,6 +83,7 @@ class KnowledgeGraphRetrievalAgent:
         with open(self.kg_path, "rb") as f:
             G = pickle.load(f)
         return G
+
 
     def find_subject(self, subject):
         if not subject:
@@ -284,9 +295,31 @@ class KnowledgeGraphRetrievalAgent:
         question_type = requirements.get("Question Type") or requirements.get("Type") or "MCQ"
 
         print("\n" + "=" * 70)
-        print("AGENT 2: KNOWLEDGE GRAPH RETRIEVAL")
+        print("AGENT 2: KNOWLEDGE GRAPH RETRIEVAL (HYBRID GRAPHRAG)")
         print("=" * 70)
         print(f"Target: {number} questions | Topic: {topic} | Difficulty: {difficulty} | Type: {question_type}")
+
+        # 1. Attempt Tri-Modal Hybrid GraphRAG Retrieval via Qdrant
+        if self.hybrid_engine:
+            try:
+                res = self.hybrid_engine.retrieve(requirements, top_k=max(number * 3, 15))
+                if res and res.get("questions"):
+                    if output_json:
+                        with open(output_json, "w", encoding="utf-8") as f:
+                            json.dump(res, f, indent=4, ensure_ascii=False)
+                    if output_pkl:
+                        try:
+                            with open(output_pkl, "wb") as f:
+                                pickle.dump(res, f)
+                        except Exception:
+                            pass
+                    return res
+            except Exception as e:
+                print(f"Hybrid GraphRAG fallback to graph traversal ({e})...")
+
+        # 2. Fallback to graph traversal
+        if self.graph is None:
+            self.graph = self._load_graph()
 
         all_candidate_nodes = []
         is_all_topics = normalize_text(topic) in ["all", "all topics", ""]
