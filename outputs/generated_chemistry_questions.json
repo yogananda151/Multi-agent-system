@@ -1,29 +1,29 @@
 {
     "questions": [
         {
-            "question": "The plot represents a zero-order reaction [A] vs time. The initial rate of reaction is [Answer in nearest integer]",
+            "question": "In the first-order reaction shown, what percentage of reactant A has reacted after 60 min? [Answer in nearest integer]",
             "option_A": "",
             "option_B": "",
             "option_C": "",
             "option_D": "",
-            "correct_answer": "0",
-            "explanation": "For zero-order, rate = k = -slope = 2.0/100.0 = 0.020 mol/(L min).",
+            "correct_answer": "87",
+            "explanation": "t½ = 20 min. At t = 60 min (3 half-lives), fraction remaining = (1/2)³ = 1/8 = 12.5%, so reacted = 87.5%.",
             "question_type": "image",
             "question_format": "Numerical",
             "image_type": "graph",
-            "image_description": "Zero-order decay plot",
+            "image_description": "First-order multi-step plot",
             "generated_image": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_002.png",
             "image_path": "D:\\Yoga\\Sem_5\\DL\\D12\\outputs\\generated_question_images\\graph_002.png",
             "source": "image_generator",
             "difficulty_category": "computed_image",
             "verification": "computed",
             "distractor_diagnostics": {
-                "A": "Misconception: Used half-life formula t_1/2 = A0/2k instead of initial rate",
-                "B": "Scientifically verified correct answer path.",
-                "C": "Misconception: Inverted slope delta_y/delta_x ratio",
-                "D": "Misconception: Erroneously assumed first-order concentration doubling"
+                "A": "Misconception: Evaluated at 4 half-lives (93.75% reacted) instead of 3 half-lives",
+                "B": "Misconception: Evaluated at 2 half-lives (75% reacted) instead of 3 half-lives",
+                "C": "Misconception: Evaluated at 1 half-life (50% remaining) instead of 3 half-lives",
+                "D": "Scientifically verified correct answer path."
             },
-            "image_family": "g_zero_order",
+            "image_family": "g_exp_decay",
             "topic": "Chemical Kinetics",
             "difficulty": "Moderate"
         }
