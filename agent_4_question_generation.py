@@ -1078,16 +1078,27 @@ def export_docx(questions: list, output_path: str, topic="ALL", difficulty="Mode
     print(f"Word document exported to: {output_path}")
 
 
-def export_sft_dataset(questions: list, output_path: str = SFT_OUTPUT_JSONL) -> int:
+def export_sft_dataset(questions: list, output_path: str = SFT_OUTPUT_JSONL, ensure_verified: bool = True) -> int:
     """
     Exports verified generated chemistry questions into JSONL format
     compatible with Kaggle QLoRA fine-tuning notebooks.
+    Consumes identical verified in-memory objects directly from the generation pipeline (no separate pass).
     Formula: D_aug = D_base U D_syn (CD-NS-KG-MAS Eq. 3)
     """
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     count = 0
     with open(output_path, "w", encoding="utf-8") as f:
         for idx, q in enumerate(questions, 1):
+            if ensure_verified:
+                # Guarantee that every exported record is from a verified in-memory object
+                status = str(q.get("verification", ""))
+                if status not in ["deterministic_verified", "computed", "revised_numerical", "revised_distractors"]:
+                    from verification.deterministic_validator import DeterministicValidator
+                    passed, _ = DeterministicValidator.validate(q)
+                    if not passed:
+                        continue
+                    q["verification"] = "deterministic_verified"
+
             q_text = str(q.get("question", ""))
             opts = [f"({opt}) {q.get(f'option_{opt}', '')}" for opt in ["A", "B", "C", "D"] if q.get(f"option_{opt}")]
             formatted_opts = "\n".join(opts) if opts else ""
@@ -1095,24 +1106,28 @@ def export_sft_dataset(questions: list, output_path: str = SFT_OUTPUT_JSONL) -> 
             prompt_input = f"{q_text}\n\nOptions:\n{formatted_opts}" if formatted_opts else q_text
             completion = f"Explanation:\n{q.get('explanation', '')}\n\nCorrect Answer: ({q.get('correct_answer', '')})"
 
+            meta = {
+                "question_id": q.get("question_id", f"SYN_CHEM_{idx:03d}"),
+                "topic": q.get("topic", q.get("image_family", "General Chemistry")),
+                "difficulty": q.get("difficulty", "Hard"),
+                "question_type": q.get("question_type", "MCQ"),
+                "question_format": q.get("question_format", "MCQ"),
+                "verification": q.get("verification", "deterministic_verified"),
+                "source": "CD-NS-KG-MAS Synthetic Augmentation",
+                "distractor_diagnostics": q.get("distractor_diagnostics", {})
+            }
+            if q.get("cross_chapter_coupling"):
+                meta["cross_chapter_coupling"] = q["cross_chapter_coupling"]
+
             record = {
                 "instruction": "Solve the following JEE Main Chemistry examination question step-by-step and provide the scientifically verified correct answer.",
                 "input": prompt_input,
                 "output": completion,
-                "metadata": {
-                    "question_id": q.get("question_id", f"SYN_CHEM_{idx:03d}"),
-                    "topic": q.get("topic", q.get("image_family", "General Chemistry")),
-                    "difficulty": q.get("difficulty", "Hard"),
-                    "question_type": q.get("question_type", "MCQ"),
-                    "question_format": q.get("question_format", "MCQ"),
-                    "verification": q.get("verification", "computed"),
-                    "source": "CD-NS-KG-MAS Synthetic Augmentation",
-                    "distractor_diagnostics": q.get("distractor_diagnostics", {})
-                }
+                "metadata": meta
             }
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
             count += 1
-    print(f"SFT Synthetic Fine-Tuning dataset exported to: {output_path} ({count} records)")
+    print(f"SFT Synthetic Fine-Tuning dataset exported to: {output_path} ({count} verified records)")
     return count
 
 

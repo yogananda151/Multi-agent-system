@@ -305,6 +305,72 @@ class TestChemistrySystem(unittest.TestCase):
 
         print("\n[PASS] Specialized Agents and Cross-Chapter KG Pairer verified.")
 
+    def test_13_full_nta_corpus_and_preprocessing(self):
+        """Test full NTA 2002–2025 corpus (5,088 questions) and text-only preprocessing."""
+        from data_preprocessing import load_full_nta_corpus, is_text_only, ChemistryDataPreprocessor
+
+        df = load_full_nta_corpus()
+        self.assertEqual(len(df), 5088)
+        text_count = sum(1 for v in df["question_images"] if is_text_only(v))
+        img_count = len(df) - text_count
+        self.assertEqual(text_count, 3247)
+        self.assertEqual(img_count, 1841)
+        self.assertGreaterEqual(df["topic"].nunique(), 32)
+
+        # Verify year coverage 2002–2025
+        self.assertEqual(df["year"].min(), 2002)
+        self.assertEqual(df["year"].max(), 2025)
+
+        preprocessor = ChemistryDataPreprocessor()
+        clean_df = preprocessor.run()
+        self.assertEqual(len(clean_df), 3247)
+        print("\n[PASS] NTA 2002–2025 corpus (5,088 Qs -> 3,247 clean text-only) verified.")
+
+    def test_14_ncert_textbook_retriever_chroma(self):
+        """Test NCERT textbook retrieval using ChromaDB and FastEmbed (BAAI/bge-small-en-v1.5)."""
+        from textbook_retrieval import NCERTTextbookRetriever
+
+        retriever = NCERTTextbookRetriever()
+        stats = retriever.get_stats()
+        self.assertGreaterEqual(stats["total_passages"], 15)
+        self.assertEqual(stats["embedding_model"], "BAAI/bge-small-en-v1.5")
+
+        # Semantic query
+        results = retriever.retrieve("Arrhenius activation energy slope", top_k=2)
+        self.assertGreaterEqual(len(results), 1)
+        self.assertIn("Chemical Kinetics", [r["chapter"] for r in results])
+        self.assertIn("text", results[0])
+        self.assertGreater(results[0]["score"], 0)
+
+        expl = retriever.retrieve_explanation("VSEPR molecular geometry")
+        self.assertIn("VSEPR", expl)
+        print("\n[PASS] NCERT Textbook ChromaDB retrieval verified.")
+
+    def test_15_sft_export_uses_identical_verified_objects(self):
+        """Test that SFT JSONL dataset export consumes identical verified in-memory objects."""
+        from agent_4_question_generation import MultimodalChemistryAgent, export_sft_dataset
+        from config import SFT_OUTPUT_JSONL
+
+        agent = MultimodalChemistryAgent()
+        qs = agent.generate(total_count=2, mode="image", topic="Chemical Kinetics")
+        self.assertEqual(len(qs), 2)
+        for q in qs:
+            self.assertEqual(q.get("verification"), "deterministic_verified")
+
+        # Export SFT dataset directly from generated objects
+        n_exported = export_sft_dataset(qs, SFT_OUTPUT_JSONL, ensure_verified=True)
+        self.assertEqual(n_exported, 2)
+
+        with open(SFT_OUTPUT_JSONL, "r", encoding="utf-8") as f:
+            lines = [json.loads(line) for line in f if line.strip()]
+
+        self.assertEqual(len(lines), 2)
+        for item in lines:
+            meta = item.get("metadata", {})
+            self.assertEqual(meta.get("verification"), "deterministic_verified")
+            self.assertEqual(meta.get("source"), "CD-NS-KG-MAS Synthetic Augmentation")
+        print("\n[PASS] SFT export with identical verified objects verified.")
+
 
 if __name__ == "__main__":
     unittest.main()
