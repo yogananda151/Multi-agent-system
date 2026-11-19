@@ -13,9 +13,7 @@ import difflib
 from typing import Dict, Any, List, Optional
 
 from config import (
-    KG_PICKLE_PATH,
     AGENT2_OUTPUT_JSON,
-    AGENT2_OUTPUT_PKL,
     DELETED_SYLLABUS_TOPICS,
     CROSS_CHAPTER_PAIRS,
 )

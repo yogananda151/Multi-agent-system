@@ -3,16 +3,12 @@ End-to-End Orchestration Pipeline for Chemistry Multi-Agent System
 Connects Agent 1 -> Agent 2 -> Agent 3 -> Agent 4 in an automated workflow.
 """
 
-import os
 import json
 import argparse
 
 from config import (
     OUTPUT_DIR,
-    KG_PICKLE_PATH,
     AGENT1_REQUIREMENTS_PATH,
-    AGENT2_OUTPUT_JSON,
-    AGENT3_OUTPUT_TXT,
     AGENT4_OUTPUT_JSON,
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
@@ -21,7 +17,6 @@ from agent_1_requirement_analysis import RequirementAnalysisAgent, load_dataset_
 from agent_2_kg_retrieval import KnowledgeGraphRetrievalAgent
 from agent_3_prompt_construction import PromptConstructionAgent
 from agent_4_question_generation import MultimodalChemistryAgent
-from knowledge_graph import ChemistryKnowledgeGraph
 
 
 class ChemistryMultiAgentPipeline:

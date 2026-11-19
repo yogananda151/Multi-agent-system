@@ -6,8 +6,6 @@ Populates the Qdrant Tri-Modal Vector Database with:
   3. Chemical structures (1024-bit RDKit Morgan fingerprints)
 """
 
-import os
-import sys
 from vector_store import ChemistryVectorStore
 from agent_4_question_generation import ORGANIC_BANK, INORGANIC_BANK
 

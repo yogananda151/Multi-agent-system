@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional
 
-from config import OUTPUT_DIR, CLEANED_DATA_PATH
+from config import OUTPUT_DIR
 
 # Qdrant client
 from qdrant_client import QdrantClient

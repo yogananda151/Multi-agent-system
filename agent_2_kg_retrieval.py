@@ -7,10 +7,8 @@ import os
 import re
 import json
 import pickle
-import random
 import difflib
 import argparse
-import networkx as nx
 
 from config import (
     KG_PICKLE_PATH,

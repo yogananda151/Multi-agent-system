@@ -10,15 +10,10 @@ Validates:
 """
 
 import os
-import sys
 import json
 import unittest
 
 from config import (
-    OUTPUT_DIR,
-    AGENT1_REQUIREMENTS_PATH,
-    AGENT2_OUTPUT_JSON,
-    AGENT3_OUTPUT_TXT,
     AGENT4_OUTPUT_JSON,
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
@@ -26,7 +21,6 @@ from config import (
 from agent_1_requirement_analysis import RequirementAnalysisAgent
 from vector_store import ChemistryVectorStore
 from hybrid_graph_rag import HybridGraphRAGEngine
-from agent_2_kg_retrieval import KnowledgeGraphRetrievalAgent
 from agent_3_prompt_construction import PromptConstructionAgent
 from agent_4_question_generation import MultimodalChemistryAgent
 from pipeline import ChemistryMultiAgentPipeline

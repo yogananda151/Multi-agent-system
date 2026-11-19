@@ -11,7 +11,6 @@ Generates verified, JEE-standard multimodal chemistry questions:
 import os
 import re
 import json
-import time
 import math
 import html
 import pickle
@@ -19,37 +18,24 @@ import base64
 import random
 import difflib
 import argparse
-import traceback
 from collections import Counter
 
 from config import (
     MODEL_NAME,
     KG_PICKLE_PATH,
     AGENT2_OUTPUT_JSON,
-    AGENT3_OUTPUT_TXT,
     AGENT4_OUTPUT_JSON,
     AGENT4_OUTPUT_PKL,
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
     SFT_OUTPUT_JSONL,
-    SFT_AUGMENTED_TRAIN_JSONL,
     GENERATED_IMAGES_DIR,
     BATCH_SIZE,
-    MAX_BATCH_ATTEMPTS,
     MAX_NEW_TOKENS,
     TEMPERATURE,
-    RETRY_TEMPERATURE,
     TOP_P,
-    TOP_K,
-    REPETITION_PENALTY,
-    VERIFY_TEXT,
-    VERIFY_MAX_TOKENS,
-    STRICT_VERIFY_ATTEMPTS,
-    DUP_SEQ_RATIO,
-    DUP_JACCARD,
     get_device_info,
     clear_cuda_memory,
-    show_gpu_memory,
 )
 
 # ==============================================================================
@@ -1039,7 +1025,7 @@ def export_docx(questions: list, output_path: str, topic="ALL", difficulty="Mode
     """Exports questions to styled Microsoft Word document."""
     try:
         from docx import Document
-        from docx.shared import Inches, Pt, RGBColor
+        from docx.shared import Inches, RGBColor
     except ImportError:
         print("Notice: 'python-docx' is not installed. Skipping Word document export.")
         print("To enable docx: pip install python-docx")

@@ -13,7 +13,6 @@ import os
 import sys
 import json
 import time
-import base64
 import streamlit as st
 
 # Ensure project root is in sys.path
@@ -22,7 +21,6 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from config import (
-    OUTPUT_DIR,
     ZIP_OUTPUT_PATH,
     GENERATED_IMAGES_DIR,
     IMAGE_ROOT,
@@ -33,9 +31,8 @@ from config import (
     AGENT4_OUTPUT_HTML,
     AGENT4_OUTPUT_DOCX,
     SFT_OUTPUT_JSONL,
-    CROSS_CHAPTER_PAIRS,
 )
-from agent_1_requirement_analysis import DEFAULT_TOPICS, DEFAULT_SUBTOPICS
+from agent_1_requirement_analysis import DEFAULT_TOPICS
 
 DIFFICULTIES = ["Easy", "Moderate", "Hard"]
 from pipeline import ChemistryMultiAgentPipeline
@@ -44,7 +41,6 @@ from hybrid_graph_rag import HybridGraphRAGEngine
 from export_outputs import package_outputs
 from vision_engine import (
     DiagramRestorationEngine,
-    SwinDiagramFeatureExtractor,
     DiagramClassifier,
     ReverseDiagramSearchEngine,
 )
@@ -130,17 +126,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-
-def get_binary_file_downloader_html(bin_file, file_label='File'):
-    """Generate HTML download button for binary files."""
-    if not os.path.exists(bin_file):
-        return ""
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    bin_str = base64.b64encode(data).decode()
-    href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file)}" style="display:inline-block;padding:8px 16px;background-color:#1E88E5;color:white;border-radius:6px;text-decoration:none;font-weight:500;">📥 Download {file_label}</a>'
-    return href
 
 
 # Sidebar Navigation

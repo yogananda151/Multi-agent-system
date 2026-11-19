@@ -6,7 +6,6 @@ Supports Windows, Linux, Colab, and Kaggle environments seamlessly.
 
 import os
 import gc
-import sys
 
 # ==============================================================================
 # ENVIRONMENT & DIRECTORY RESOLUTION
@@ -28,7 +27,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Image directories
 IMAGE_ROOT = os.path.join(OUTPUT_DIR, "chemistry_images")
 GENERATED_IMAGES_DIR = os.path.join(OUTPUT_DIR, "generated_question_images")
-os.makedirs(IMAGE_ROOT, exist_ok=True)
 os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
 
 # ==============================================================================

@@ -10,23 +10,14 @@ Brings the deep learning models from Unet+Swin.ipynb into real-time service:
 """
 
 import os
-import io
-import math
-import base64
-import random
 from typing import Dict, Any, List, Tuple, Optional
-from PIL import Image, ImageFilter, ImageOps, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from config import (
-    OUTPUT_DIR,
-    GENERATED_IMAGES_DIR,
-    IMAGE_ROOT,
-)
 from vector_store import ChemistryVectorStore
 
 
