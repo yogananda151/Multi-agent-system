@@ -98,7 +98,28 @@ class ChemistryVectorStore:
             db_path = os.path.join(OUTPUT_DIR, "qdrant_db")
         os.makedirs(db_path, exist_ok=True)
         self.db_path = db_path
-        self.client = QdrantClient(path=self.db_path)
+
+        # Proactively remove stale Qdrant lock file if present to prevent startup blocks
+        lock_file = os.path.join(self.db_path, ".lock")
+        if os.path.exists(lock_file):
+            try:
+                os.remove(lock_file)
+            except OSError:
+                pass
+
+        try:
+            self.client = QdrantClient(path=self.db_path)
+        except Exception as e:
+            # If Qdrant failed due to an existing lock file, clean and retry
+            if os.path.exists(lock_file):
+                try:
+                    os.remove(lock_file)
+                    self.client = QdrantClient(path=self.db_path)
+                except Exception:
+                    raise e
+            else:
+                raise e
+
         self.embedder = LightweightEmbedder(dim=384)
         self._init_collections()
 
