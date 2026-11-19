@@ -150,19 +150,27 @@ class KnowledgeGraphRetrievalAgent:
         return question_node.replace("QUESTION_", "")
 
     def get_options(self, question_node):
-        """Extracts options A-D with correct flag."""
+        """Extracts options A-D with correct flag, propagating HAS_CORRECT_OPTION edges."""
         options = []
+        q_data = self.graph.nodes[question_node]
+        q_correct = str(q_data.get("correct_option") or "").strip().upper()
+        if q_correct not in "ABCD":
+            q_correct = None
+
         for neighbor in self.graph.successors(question_node):
             data = self.graph.nodes[neighbor]
             if data.get("type") != "Option":
                 continue
             label = str(data.get("label", "")).strip()
             match = re.search(r"([A-D])$", label.upper())
-            letter = match.group(1) if match else ""
+            letter = match.group(1) if match else (neighbor.split("_")[-1] if neighbor.split("_")[-1] in "ABCD" else "")
             text = data.get("text", "")
 
             edge_data = self.graph.get_edge_data(question_node, neighbor, {})
-            is_correct = edge_data.get("relation") == "HAS_CORRECT_OPTION"
+            rel = str(edge_data.get("relation", "")).upper()
+            is_correct = (rel == "HAS_CORRECT_OPTION" or "CORRECT_OPTION" in rel)
+            if not is_correct and q_correct and letter == q_correct:
+                is_correct = True
 
             options.append({
                 "option": letter,
@@ -271,6 +279,17 @@ class KnowledgeGraphRetrievalAgent:
                 correct_option = opt.get("option")
                 break
 
+        if not correct_option:
+            raw_node_correct = data.get("correct_option")
+            if raw_node_correct and str(raw_node_correct).strip().upper() in "ABCD":
+                correct_option = str(raw_node_correct).strip().upper()
+                for opt in options:
+                    if opt.get("option") == correct_option:
+                        opt["is_correct"] = True
+                        break
+
+        ca = correct_option if (correct_option and correct_option in "ABCD") else ""
+
         return {
             "question_id": question_id,
             "question": question_text,
@@ -280,7 +299,8 @@ class KnowledgeGraphRetrievalAgent:
             "difficulty": difficulty,
             "question_type": question_type,
             "options": options,
-            "correct_option": correct_option,
+            "correct_option": ca,
+            "correct_answer": ca,
             "images": images
         }
 

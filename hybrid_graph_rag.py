@@ -176,7 +176,25 @@ class HybridGraphRAGEngine:
 
         selected_questions = fused_questions[:top_k]
 
-        # 4. Self-RAG Verification Gate
+        # 4. Self-RAG Verification & Option Consistency Gate
+        for q in selected_questions:
+            ca = q.get("correct_answer")
+            if ca in (None, "None", "none", "null", "NULL", ""):
+                ca = q.get("correct_option")
+            opts = q.get("options", [])
+            if ca in (None, "None", "none", "null", "NULL", "") and isinstance(opts, list):
+                for opt in opts:
+                    if isinstance(opt, dict) and opt.get("is_correct"):
+                        ca = opt.get("option")
+                        break
+            clean_ca = str(ca).strip().upper() if (ca and str(ca).strip().upper() in ("A", "B", "C", "D")) else ""
+            q["correct_answer"] = clean_ca
+            q["correct_option"] = clean_ca
+            if clean_ca and isinstance(opts, list):
+                for opt in opts:
+                    if isinstance(opt, dict):
+                        opt["is_correct"] = (str(opt.get("option", "")).strip().upper() == clean_ca)
+
         verified_count = len(selected_questions)
         print(f"Selected {verified_count} top-tier exemplar questions via GraphRAG.")
 

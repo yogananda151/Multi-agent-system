@@ -7,10 +7,12 @@ Manages Qdrant collections for:
 """
 
 import os
+import re
 import json
+import pickle
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from config import OUTPUT_DIR
 
@@ -183,6 +185,26 @@ class ChemistryVectorStore:
             composite_text = f"Topic: {topic}. Subtopic: {subtopic}. Difficulty: {diff}. Question: {q_text}"
             texts.append(composite_text)
 
+            # Clean and propagate correct_answer / correct_option
+            ca = q.get("correct_answer")
+            if ca in (None, "None", "none", "null", "NULL", ""):
+                ca = q.get("correct_option")
+
+            options = q.get("options", [])
+            if ca in (None, "None", "none", "null", "NULL", "") and isinstance(options, list):
+                for opt in options:
+                    if isinstance(opt, dict) and opt.get("is_correct"):
+                        ca = opt.get("option")
+                        break
+
+            clean_ca = str(ca).strip().upper() if (ca and str(ca).strip().upper() in ("A", "B", "C", "D")) else ""
+
+            # Ensure options list has is_correct = True for clean_ca
+            if clean_ca and isinstance(options, list):
+                for opt in options:
+                    if isinstance(opt, dict):
+                        opt["is_correct"] = (str(opt.get("option", "")).strip().upper() == clean_ca)
+
             payloads.append({
                 "question_id": str(q.get("question_id", q.get("kg_source_id", f"Q_{idx}"))),
                 "question": q_text,
@@ -190,8 +212,9 @@ class ChemistryVectorStore:
                 "subtopic": subtopic,
                 "difficulty": diff,
                 "question_type": str(q.get("question_type", "MCQ")),
-                "correct_answer": str(q.get("correct_answer", q.get("correct_option", ""))),
-                "options": q.get("options", []),
+                "correct_answer": clean_ca,
+                "correct_option": clean_ca,
+                "options": options,
                 "explanation": str(q.get("explanation", ""))
             })
             point_ids.append(existing_count + idx + 1)
@@ -211,6 +234,132 @@ class ChemistryVectorStore:
             )
 
         print(f"Successfully indexed {len(points)} questions into '{self.TEXT_COLLECTION}'.")
+        return len(points)
+
+    def index_questions_from_kg(self, graph_or_path: Any) -> int:
+        """
+        Indexes Question nodes from Knowledge Graph into Qdrant text collection.
+        Propagates HAS_CORRECT_OPTION edges directly to correct_option & correct_answer fields.
+        """
+        if isinstance(graph_or_path, str):
+            if not os.path.exists(graph_or_path):
+                print(f"KG file not found: {graph_or_path}")
+                return 0
+            with open(graph_or_path, "rb") as f:
+                graph = pickle.load(f)
+        else:
+            graph = graph_or_path
+
+        if graph is None:
+            return 0
+
+        # Import propagation helper if available
+        try:
+            from knowledge_graph import propagate_correct_options
+            graph = propagate_correct_options(graph)
+        except Exception:
+            pass
+
+        question_nodes = [n for n, d in graph.nodes(data=True) if d.get("type") == "Question"]
+        if not question_nodes:
+            return 0
+
+        texts = []
+        payloads = []
+        point_ids = []
+        existing_count = self.client.get_collection(self.TEXT_COLLECTION).points_count or 0
+
+        for idx, q_node in enumerate(question_nodes):
+            q_data = graph.nodes[q_node]
+            q_text = str(q_data.get("question", "")).strip()
+            if not q_text:
+                continue
+
+            qid = str(q_data.get("label", q_node)).replace("QUESTION_", "")
+
+            # Extract options and propagate HAS_CORRECT_OPTION edge
+            options = []
+            correct_from_edge = None
+            for succ in graph.successors(q_node):
+                succ_data = graph.nodes.get(succ, {})
+                if succ_data.get("type") == "Option":
+                    lbl = str(succ_data.get("label", "")).strip().upper()
+                    m = re.search(r"([A-D])$", lbl)
+                    letter = m.group(1) if m else (succ.split("_")[-1] if succ.split("_")[-1] in "ABCD" else "")
+                    opt_text = str(succ_data.get("text", "")).strip()
+
+                    edge_data = graph.get_edge_data(q_node, succ) or {}
+                    rel = str(edge_data.get("relation", "")).upper()
+                    is_correct = (rel == "HAS_CORRECT_OPTION" or "CORRECT_OPTION" in rel)
+                    if is_correct and letter in "ABCD":
+                        correct_from_edge = letter
+
+                    options.append({
+                        "option": letter,
+                        "text": opt_text,
+                        "is_correct": is_correct
+                    })
+
+            options.sort(key=lambda x: x.get("option", ""))
+
+            # Resolve correct answer: edge > node attribute > None
+            raw_ca = correct_from_edge or q_data.get("correct_option")
+            clean_ca = str(raw_ca).strip().upper() if (raw_ca and str(raw_ca).strip().upper() in "ABCD") else ""
+
+            # Ensure matching option is flagged as correct
+            if clean_ca:
+                for opt in options:
+                    opt["is_correct"] = (opt.get("option") == clean_ca)
+
+            # Trace metadata (difficulty, subtopic, topic)
+            diff = "Moderate"
+            for succ in graph.successors(q_node):
+                if graph.nodes.get(succ, {}).get("type") == "Difficulty":
+                    diff = str(graph.nodes[succ].get("label", "Moderate")).replace("DIFFICULTY_", "")
+                    break
+
+            topic = "General Chemistry"
+            subtopic = "General"
+            for pred in graph.predecessors(q_node):
+                pdata = graph.nodes.get(pred, {})
+                if pdata.get("type") == "Subtopic":
+                    subtopic = str(pdata.get("label", "General"))
+                    for tpred in graph.predecessors(pred):
+                        tpdata = graph.nodes.get(tpred, {})
+                        if tpdata.get("type") == "Topic":
+                            topic = str(tpdata.get("label", "General Chemistry"))
+
+            composite_text = f"Topic: {topic}. Subtopic: {subtopic}. Difficulty: {diff}. Question: {q_text}"
+            texts.append(composite_text)
+
+            payloads.append({
+                "question_id": qid,
+                "question": q_text,
+                "topic": topic,
+                "subtopic": subtopic,
+                "difficulty": diff,
+                "question_type": str(q_data.get("question_type", "MCQ")),
+                "correct_answer": clean_ca,
+                "correct_option": clean_ca,
+                "options": options,
+                "explanation": ""
+            })
+            point_ids.append(existing_count + idx + 1)
+
+        vectors = self.embedder.embed_texts(texts)
+        points = [
+            PointStruct(id=pid, vector=v, payload=p)
+            for pid, v, p in zip(point_ids, vectors, payloads)
+        ]
+
+        batch_size = 100
+        for b_start in range(0, len(points), batch_size):
+            self.client.upsert(
+                collection_name=self.TEXT_COLLECTION,
+                points=points[b_start : b_start + batch_size]
+            )
+
+        print(f"Successfully indexed {len(points)} KG questions into '{self.TEXT_COLLECTION}'.")
         return len(points)
 
     def search_questions(
@@ -262,6 +411,25 @@ class ChemistryVectorStore:
         for r in res.points:
             item = dict(r.payload)
             item["similarity_score"] = float(r.score)
+
+            # Sanitize correct_answer and correct_option
+            ca = item.get("correct_answer")
+            if ca in (None, "None", "none", "null", "NULL", ""):
+                ca = item.get("correct_option")
+            opts = item.get("options", [])
+            if ca in (None, "None", "none", "null", "NULL", "") and isinstance(opts, list):
+                for opt in opts:
+                    if isinstance(opt, dict) and opt.get("is_correct"):
+                        ca = opt.get("option")
+                        break
+            clean_ca = str(ca).strip().upper() if (ca and str(ca).strip().upper() in ("A", "B", "C", "D")) else ""
+            item["correct_answer"] = clean_ca
+            item["correct_option"] = clean_ca
+            if clean_ca and isinstance(opts, list):
+                for opt in opts:
+                    if isinstance(opt, dict):
+                        opt["is_correct"] = (str(opt.get("option", "")).strip().upper() == clean_ca)
+
             output.append(item)
         return output
 

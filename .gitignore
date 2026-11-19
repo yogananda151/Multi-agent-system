@@ -14,3 +14,6 @@ env/
 # Database lock files
 *.lock
 
+# Large dataset image dumps
+outputs/chemistry_images/
+

@@ -15,7 +15,7 @@
             "subtopic": "Experimental Method to calculate order and rate law of",
             "difficulty": "Moderate",
             "question_type": "single_correct",
-            "correct_answer": "None",
+            "correct_answer": "B",
             "options": [
                 {
                     "option": "A",
@@ -25,7 +25,7 @@
                 {
                     "option": "B",
                     "text": "47 mm of Hg",
-                    "is_correct": false
+                    "is_correct": true
                 },
                 {
                     "option": "C",
@@ -39,6 +39,7 @@
                 }
             ],
             "explanation": "",
+            "correct_option": "B",
             "similarity_score": 0.7052427891935077,
             "rrf_score": 0.06402049075403121
         },
@@ -49,9 +50,10 @@
             "subtopic": "Integrated Rate law : Second Order & Pseudo first order",
             "difficulty": "Moderate",
             "question_type": "single_correct",
-            "correct_answer": "None",
+            "correct_answer": "",
             "options": [],
             "explanation": "",
+            "correct_option": "",
             "similarity_score": 0.688427054949704,
             "rrf_score": 0.06402049075403121
         }

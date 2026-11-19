@@ -28,6 +28,7 @@ Options:
 (B) 47 mm of Hg
 (C) 43 mm of Hg
 (D) 90 mm of Hg
+Correct Option: B
 ----------------------------------------
 REFERENCE QUESTION 2
 Question ID   : CH-15-Q8
@@ -58,6 +59,7 @@ Options:
 (B) $\frac{2303}{500}\log\frac{100}{90}$
 (C) $\frac{2303}{500}\log\frac{90}{100}$
 (D) $\frac{100}{10 \times 500}$
+Correct Option: A
 ----------------------------------------
 ============================================================
 GENERATION INSTRUCTIONS

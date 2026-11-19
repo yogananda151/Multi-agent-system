@@ -59,6 +59,9 @@ class TestChemistrySystem(unittest.TestCase):
         self.assertIn("questions", context)
         self.assertGreaterEqual(len(context["questions"]), 1)
         self.assertEqual(context.get("retrieval_method"), "Hybrid GraphRAG (Qdrant + FastEmbed + RRF)")
+        for q in context["questions"]:
+            self.assertNotEqual(q.get("correct_answer"), "None")
+            self.assertNotEqual(q.get("correct_option"), "None")
         rag.close()
         print("\n[PASS] Hybrid GraphRAG retrieval & RRF passed.")
 
@@ -166,6 +169,38 @@ class TestChemistrySystem(unittest.TestCase):
         self.assertGreaterEqual(len(matches), 1)
         searcher.close()
         print("\n[PASS] Fullstack Computer Vision Suite (U-Net, Swin-T, Classifier, CBIR) passed.")
+
+    def test_10_kg_has_correct_option_propagation(self):
+        """Test HAS_CORRECT_OPTION edges propagate to correct_option field in KG and Vector Store."""
+        import networkx as nx
+        from knowledge_graph import propagate_correct_options
+
+        # 1. Build synthetic test graph with edge relation HAS_CORRECT_OPTION and None correct_option
+        G = nx.DiGraph()
+        G.add_node("QUESTION_TEST_Q1", type="Question", label="TEST_Q1", question="Sample rate law question", correct_option=None)
+        G.add_node("OPTION_TEST_Q1_A", type="Option", label="Option A", text="Option A text")
+        G.add_node("OPTION_TEST_Q1_B", type="Option", label="Option B", text="Option B text")
+        G.add_edge("QUESTION_TEST_Q1", "OPTION_TEST_Q1_A", relation="HAS_OPTION")
+        G.add_edge("QUESTION_TEST_Q1", "OPTION_TEST_Q1_B", relation="HAS_CORRECT_OPTION")
+
+        # Verify propagation from edge to Question node
+        G = propagate_correct_options(G)
+        self.assertEqual(G.nodes["QUESTION_TEST_Q1"].get("correct_option"), "B")
+
+        # 2. Test propagation through Vector Store indexing
+        vs = ChemistryVectorStore()
+        indexed = vs.index_questions_from_kg(G)
+        self.assertGreaterEqual(indexed, 1)
+
+        # 3. Verify indexed point has correct_answer == "B" and option B is_correct == True
+        results = vs.search_questions("Sample rate law question", top_k=1)
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0].get("correct_answer"), "B")
+        self.assertEqual(results[0].get("correct_option"), "B")
+        b_opts = [o for o in results[0].get("options", []) if o.get("option") == "B"]
+        self.assertTrue(len(b_opts) > 0 and b_opts[0].get("is_correct"))
+        vs.close()
+        print("\n[PASS] HAS_CORRECT_OPTION edge propagation to correct_option field verified.")
 
 
 if __name__ == "__main__":

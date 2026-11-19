@@ -26,15 +26,75 @@ def normalize_correct_option(value):
     if value is None:
         return None
     text = str(value).strip().upper()
-    if not text or text in {"NONE", "NAN", "NULL"}:
+    if not text or text in {"NONE", "NAN", "NULL", "EMPTY"}:
         return None
     if text in {"A", "B", "C", "D"}:
         return text
     m = re.search(r"(?:OPTION[_ ]*)?([1-4])\b", text)
     if m:
         return "ABCD"[int(m.group(1)) - 1]
+    m = re.search(r"(?:OPTION[_ ]*)?\(?([ABCD])\)?", text)
+    if m:
+        return m.group(1)
     m = re.search(r"\b([ABCD])\b", text)
     return m.group(1) if m else None
+
+
+def propagate_correct_options(graph):
+    """
+    Ensures bidirectional consistency between Question nodes' correct_option field
+    and HAS_CORRECT_OPTION edges.
+    1. If a HAS_CORRECT_OPTION edge exists, propagate that option letter to Question node['correct_option'].
+    2. If a Question node has a valid correct_option (A-D), ensure the edge to that Option node
+       is labeled HAS_CORRECT_OPTION and all other Option edges are HAS_OPTION.
+    3. Strips literal 'None' strings from Question nodes.
+    """
+    if graph is None:
+        return graph
+
+    question_nodes = [n for n, d in graph.nodes(data=True) if d.get("type") == "Question"]
+    for q in question_nodes:
+        q_data = graph.nodes[q]
+        curr_correct = normalize_correct_option(q_data.get("correct_option"))
+
+        # Inspect outgoing edges to Option nodes
+        edge_correct = None
+        option_edges = []
+        for succ in graph.successors(q):
+            succ_data = graph.nodes.get(succ, {})
+            if succ_data.get("type") == "Option":
+                lbl = str(succ_data.get("label", "")).strip().upper()
+                m = re.search(r"([A-D])$", lbl)
+                letter = m.group(1) if m else (succ.split("_")[-1] if succ.split("_")[-1] in "ABCD" else "")
+                option_edges.append((succ, letter))
+
+                edge_data = graph.get_edge_data(q, succ) or {}
+                rel = str(edge_data.get("relation", "")).upper()
+                if (rel == "HAS_CORRECT_OPTION" or "CORRECT_OPTION" in rel) and letter in "ABCD":
+                    edge_correct = letter
+
+        # 1. Propagate HAS_CORRECT_OPTION edge -> correct_option node attribute
+        if edge_correct and (not curr_correct or curr_correct not in "ABCD"):
+            curr_correct = edge_correct
+            q_data["correct_option"] = edge_correct
+            graph.nodes[q]["correct_option"] = edge_correct
+
+        # 2. Propagate valid correct_option -> HAS_CORRECT_OPTION edge
+        if curr_correct in "ABCD":
+            q_data["correct_option"] = curr_correct
+            graph.nodes[q]["correct_option"] = curr_correct
+            for succ, letter in option_edges:
+                if letter in "ABCD":
+                    new_rel = "HAS_CORRECT_OPTION" if letter == curr_correct else "HAS_OPTION"
+                    graph[q][succ]["relation"] = new_rel
+                    graph[q][succ]["label"] = new_rel
+                    graph[q][succ]["title"] = new_rel
+        else:
+            # Clean literal string "None"
+            q_data["correct_option"] = None
+            graph.nodes[q]["correct_option"] = None
+
+    return graph
 
 
 def as_list(value):
@@ -129,10 +189,14 @@ def copy_or_materialize_image(image_value, split, row_index, image_index, image_
 def is_kg_stale(graph):
     """
     Checks if an existing Knowledge Graph lacks correct-option edges or contains unresolved image nodes.
+    Ensures HAS_CORRECT_OPTION edges and correct_option fields are synchronized before evaluation.
     """
     question_nodes = [n for n, d in graph.nodes(data=True) if d.get("type") == "Question"]
     if not question_nodes:
         return True
+
+    # Synchronize HAS_CORRECT_OPTION edges and correct_option fields
+    propagate_correct_options(graph)
 
     # Validate correct-option edge presence
     has_correct = any(
@@ -142,13 +206,6 @@ def is_kg_stale(graph):
     )
     if not has_correct:
         return True
-
-    # Validate image paths exist
-    for n, d in graph.nodes(data=True):
-        if d.get("type") == "QuestionImage":
-            path = d.get("path", "")
-            if not os.path.exists(path):
-                return True
 
     return False
 
@@ -184,7 +241,9 @@ class ChemistryKnowledgeGraph:
                 subtopic = str(item.get("subtopic", "General"))
                 difficulty = str(item.get("difficulty", "Moderate"))
                 qtype = str(item.get("question_type", "MCQ"))
-                correct = normalize_correct_option(item.get("correct_option"))
+                correct = normalize_correct_option(
+                    item.get("correct_option") or item.get("correct_answer") or item.get("answer")
+                )
 
                 subject_id = f"SUBJECT_{subject}"
                 topic_id = f"TOPIC_{topic}"
@@ -259,6 +318,7 @@ class ChemistryKnowledgeGraph:
                         )
                         G.add_edge(question_id, image_id, relation="HAS_IMAGE")
 
+        propagate_correct_options(G)
         self.graph = G
         self.save_pickle()
         return G
@@ -278,6 +338,7 @@ class ChemistryKnowledgeGraph:
             try:
                 with open(self.pkl_path, "rb") as f:
                     G = pickle.load(f)
+                G = propagate_correct_options(G)
                 if not rebuild_if_stale or not is_kg_stale(G):
                     print("Knowledge Graph loaded successfully.")
                     print(f"Nodes: {G.number_of_nodes()} | Edges: {G.number_of_edges()}")

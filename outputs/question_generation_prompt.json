@@ -23,7 +23,7 @@
                 "subtopic": "Experimental Method to calculate order and rate law of",
                 "difficulty": "Moderate",
                 "question_type": "single_correct",
-                "correct_answer": "None",
+                "correct_answer": "B",
                 "options": [
                     {
                         "option": "A",
@@ -33,7 +33,7 @@
                     {
                         "option": "B",
                         "text": "47 mm of Hg",
-                        "is_correct": false
+                        "is_correct": true
                     },
                     {
                         "option": "C",
@@ -47,6 +47,7 @@
                     }
                 ],
                 "explanation": "",
+                "correct_option": "B",
                 "similarity_score": 0.7970653961942262,
                 "rrf_score": 0.06402049075403121
             },
@@ -57,9 +58,10 @@
                 "subtopic": "Integrated Rate law : Second Order & Pseudo first order",
                 "difficulty": "Moderate",
                 "question_type": "single_correct",
-                "correct_answer": "None",
+                "correct_answer": "",
                 "options": [],
                 "explanation": "",
+                "correct_option": "",
                 "similarity_score": 0.7484871579300453,
                 "rrf_score": 0.06402049075403121
             },
@@ -95,6 +97,7 @@
                 ],
                 "explanation": "",
                 "similarity_score": 0.746229464444166,
+                "correct_option": "A",
                 "rrf_score": 0.061072261072261075
             }
         ],
@@ -103,5 +106,5 @@
         "cross_chapter_coupling": null,
         "syllabus_pruned_notice": null
     },
-    "generation_prompt": "You are a Chemistry question generation system specialized in JEE/NEET-style examination questions.\n\n============================================================\nTARGET REQUIREMENTS\nSubject: Chemistry\nExam: JEE Main\nTarget topic: Chemical Kinetics\nTarget concept: Not specified\nNumber of questions: 2\nDifficulty: Moderate\nQuestion type: MCQ\n============================================================\nKNOWLEDGE GRAPH REFERENCES\n\nREFERENCE QUESTION 1\nQuestion ID   : CH-15-Q10\nTopic         : Chemical Kinetics\nSubtopic      : Experimental Method to calculate order and rate law of\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nAt 373 K, a gaseous reaction A→ 2B + C is found to be of first\norder. Starting with pure A, the total pressure at the end of 10 min was\n176 mm of Hg and after a long time when A was completely dissociated, it\nwas 270 mm of Hg. The pressure of A at the end of 10 minutes was\nOptions:\n(A) 94 mm of Hg\n(B) 47 mm of Hg\n(C) 43 mm of Hg\n(D) 90 mm of Hg\n----------------------------------------\nREFERENCE QUESTION 2\nQuestion ID   : CH-15-Q8\nTopic         : Chemical Kinetics\nSubtopic      : Integrated Rate law : Second Order & Pseudo first order\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nGraph between concentration of the product and time of the\nreaction A→B is of the\nHence graph between $- \\frac{d\\lbrack A\\rbrack}{dt}$ and time will be\nof the type\n----------------------------------------\nREFERENCE QUESTION 3\nQuestion ID   : CH-15-Q13\nTopic         : Chemical Kinetics\nSubtopic      : Method to monitor the progress of Reactions (Titration Method\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nThe decomposition of N2O5 in chloroform was followed by\nmeasuring the volume of O2 gas evolved: 2N2O5(CCI4) → 2N2O4(CCI4) +\nO2(g). The maximum volume of O2 gas obtained was 100 cm3. In 500\nminutes, 90 cm3 of O2 were evolved. The first order rate constant (in\nmin-1) for the disappearance of N2O5 is\nOptions:\n(A) $\\frac{2303}{500}$\n(B) $\\frac{2303}{500}\\log\\frac{100}{90}$\n(C) $\\frac{2303}{500}\\log\\frac{90}{100}$\n(D) $\\frac{100}{10 \\times 500}$\n----------------------------------------\n============================================================\nGENERATION INSTRUCTIONS\n1. Generate new Chemistry questions aligned with the target requirements and referenced Knowledge Graph concepts.\n2. The retrieved questions are reference material only. DO NOT copy any reference question directly.\n3. Create ORIGINAL questions while preserving scientific correctness, difficulty level, and examination style.\n4. Ensure every question is chemically meaningful, unambiguous, and solvable.\n5. All chemical equations, formulas, and stoichiometric values must be mathematically and scientifically balanced.\n6. Provide comprehensive, step-by-step reasoning in the explanation.\n\n\nMCQ FORMAT SPECIFICATIONS\n- Every question must provide: Question text, Option A, Option B, Option C, Option D, Correct Answer, Explanation.\n- Exactly four distinct options (A, B, C, D) must be provided.\n- Exactly one option must be unambiguously correct.\n- Distractors must be plausible, reflecting common student errors or misconceptions (e.g. inverted ratio, wrong oxidation state).\n============================================================\nOUTPUT FORMAT\nReturn ONLY valid JSON with this exact structure:\n{\n    \"questions\": [\n        {\n            \"question\": \"Question text...\",\n            \"option_A\": \"First option...\",\n            \"option_B\": \"Second option...\",\n            \"option_C\": \"Third option...\",\n            \"option_D\": \"Fourth option...\",\n            \"correct_answer\": \"A\",\n            \"explanation\": \"Detailed explanation showing why A is correct and others are wrong...\"\n        }\n    ]\n}\n============================================================"
+    "generation_prompt": "You are a Chemistry question generation system specialized in JEE/NEET-style examination questions.\n\n============================================================\nTARGET REQUIREMENTS\nSubject: Chemistry\nExam: JEE Main\nTarget topic: Chemical Kinetics\nTarget concept: Not specified\nNumber of questions: 2\nDifficulty: Moderate\nQuestion type: MCQ\n============================================================\nKNOWLEDGE GRAPH REFERENCES\n\nREFERENCE QUESTION 1\nQuestion ID   : CH-15-Q10\nTopic         : Chemical Kinetics\nSubtopic      : Experimental Method to calculate order and rate law of\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nAt 373 K, a gaseous reaction A→ 2B + C is found to be of first\norder. Starting with pure A, the total pressure at the end of 10 min was\n176 mm of Hg and after a long time when A was completely dissociated, it\nwas 270 mm of Hg. The pressure of A at the end of 10 minutes was\nOptions:\n(A) 94 mm of Hg\n(B) 47 mm of Hg\n(C) 43 mm of Hg\n(D) 90 mm of Hg\nCorrect Option: B\n----------------------------------------\nREFERENCE QUESTION 2\nQuestion ID   : CH-15-Q8\nTopic         : Chemical Kinetics\nSubtopic      : Integrated Rate law : Second Order & Pseudo first order\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nGraph between concentration of the product and time of the\nreaction A→B is of the\nHence graph between $- \\frac{d\\lbrack A\\rbrack}{dt}$ and time will be\nof the type\n----------------------------------------\nREFERENCE QUESTION 3\nQuestion ID   : CH-15-Q13\nTopic         : Chemical Kinetics\nSubtopic      : Method to monitor the progress of Reactions (Titration Method\nDifficulty    : Moderate\nQuestion Type : single_correct\nQuestion:\nThe decomposition of N2O5 in chloroform was followed by\nmeasuring the volume of O2 gas evolved: 2N2O5(CCI4) → 2N2O4(CCI4) +\nO2(g). The maximum volume of O2 gas obtained was 100 cm3. In 500\nminutes, 90 cm3 of O2 were evolved. The first order rate constant (in\nmin-1) for the disappearance of N2O5 is\nOptions:\n(A) $\\frac{2303}{500}$\n(B) $\\frac{2303}{500}\\log\\frac{100}{90}$\n(C) $\\frac{2303}{500}\\log\\frac{90}{100}$\n(D) $\\frac{100}{10 \\times 500}$\nCorrect Option: A\n----------------------------------------\n============================================================\nGENERATION INSTRUCTIONS\n1. Generate new Chemistry questions aligned with the target requirements and referenced Knowledge Graph concepts.\n2. The retrieved questions are reference material only. DO NOT copy any reference question directly.\n3. Create ORIGINAL questions while preserving scientific correctness, difficulty level, and examination style.\n4. Ensure every question is chemically meaningful, unambiguous, and solvable.\n5. All chemical equations, formulas, and stoichiometric values must be mathematically and scientifically balanced.\n6. Provide comprehensive, step-by-step reasoning in the explanation.\n\n\nMCQ FORMAT SPECIFICATIONS\n- Every question must provide: Question text, Option A, Option B, Option C, Option D, Correct Answer, Explanation.\n- Exactly four distinct options (A, B, C, D) must be provided.\n- Exactly one option must be unambiguously correct.\n- Distractors must be plausible, reflecting common student errors or misconceptions (e.g. inverted ratio, wrong oxidation state).\n============================================================\nOUTPUT FORMAT\nReturn ONLY valid JSON with this exact structure:\n{\n    \"questions\": [\n        {\n            \"question\": \"Question text...\",\n            \"option_A\": \"First option...\",\n            \"option_B\": \"Second option...\",\n            \"option_C\": \"Third option...\",\n            \"option_D\": \"Fourth option...\",\n            \"correct_answer\": \"A\",\n            \"explanation\": \"Detailed explanation showing why A is correct and others are wrong...\"\n        }\n    ]\n}\n============================================================"
 }
