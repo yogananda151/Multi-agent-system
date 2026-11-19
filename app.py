@@ -598,7 +598,7 @@ elif app_mode == "🔍 Tri-Modal Vector DB Search":
                     <div class="question-card">
                         <span class="badge-topic">{r.get('topic', 'N/A')}</span>
                         <span class="badge-diff">{r.get('difficulty', 'N/A')}</span>
-                        <span class="badge-rag">Cosine Score: {r.get('score', 0):.4f}</span>
+                        <span class="badge-rag">Cosine Score: {r.get('similarity_score', r.get('score', 0)):.4f}</span>
                         <p style="margin-top:10px;font-size:1.05rem;"><b>{r.get('question_id', '')}</b>: {r.get('question', '')}</p>
                         <p style="color:#546E7A;font-size:0.9rem;">Subtopic: {r.get('subtopic', 'N/A')} | Question Type: {r.get('type', 'MCQ')}</p>
                     </div>
@@ -613,7 +613,7 @@ elif app_mode == "🔍 Tri-Modal Vector DB Search":
             with st.spinner("Finding nearest diagram representations..."):
                 diag_results = vs.search_questions(diag_query, top_k=3)
                 for r in diag_results:
-                    st.markdown(f"**ID:** `{r.get('question_id')}` | **Similarity:** `{r.get('score', 0):.4f}`")
+                    st.markdown(f"**ID:** `{r.get('question_id')}` | **Similarity:** `{r.get('similarity_score', r.get('score', 0.0)):.4f}`")
                     st.write(r.get("question"))
 
     elif "molecular_structures" in coll_choice:
@@ -674,7 +674,7 @@ elif app_mode == "🧠 Hybrid GraphRAG Inspector":
             st.markdown(f"""
             <div class="question-card">
                 <b>[{q.get('question_id')}]</b> {q.get('question')}
-                <br><small>Topic: <b>{q.get('topic')}</b> | Difficulty: <b>{q.get('difficulty')}</b> | Score: <b>{q.get('score', 1.0):.4f}</b></small>
+                <br><small>Topic: <b>{q.get('topic')}</b> | Difficulty: <b>{q.get('difficulty')}</b> | Score: <b>{q.get('similarity_score', q.get('rrf_score', q.get('score', 1.0))):.4f}</b></small>
             </div>
             """, unsafe_allow_html=True)
 

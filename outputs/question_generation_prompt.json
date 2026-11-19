@@ -49,6 +49,7 @@
                 "explanation": "",
                 "correct_option": "B",
                 "similarity_score": 0.7970653961942262,
+                "score": 0.7970653961942262,
                 "rrf_score": 0.06402049075403121
             },
             {
@@ -63,6 +64,7 @@
                 "explanation": "",
                 "correct_option": "",
                 "similarity_score": 0.7484871579300453,
+                "score": 0.7484871579300453,
                 "rrf_score": 0.06402049075403121
             },
             {
@@ -97,6 +99,7 @@
                 ],
                 "explanation": "",
                 "similarity_score": 0.746229464444166,
+                "score": 0.746229464444166,
                 "correct_option": "A",
                 "rrf_score": 0.061072261072261075
             }

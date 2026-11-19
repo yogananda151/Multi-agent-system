@@ -41,6 +41,7 @@
             "explanation": "",
             "correct_option": "B",
             "similarity_score": 0.7052427891935077,
+            "score": 0.7052427891935077,
             "rrf_score": 0.06402049075403121
         },
         {
@@ -55,6 +56,7 @@
             "explanation": "",
             "correct_option": "",
             "similarity_score": 0.688427054949704,
+            "score": 0.688427054949704,
             "rrf_score": 0.06402049075403121
         }
     ],

@@ -410,7 +410,9 @@ class ChemistryVectorStore:
         output = []
         for r in res.points:
             item = dict(r.payload)
-            item["similarity_score"] = float(r.score)
+            score_val = float(r.score)
+            item["similarity_score"] = score_val
+            item["score"] = score_val
 
             # Sanitize correct_answer and correct_option
             ca = item.get("correct_answer")
