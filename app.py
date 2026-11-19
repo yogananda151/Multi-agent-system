@@ -11,9 +11,12 @@ Integrates:
 
 import os
 import sys
+import io
 import json
 import time
+import numpy as np
 import streamlit as st
+from PIL import Image
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
