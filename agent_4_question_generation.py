@@ -1154,40 +1154,63 @@ class MultimodalChemistryAgent:
             print(f"\n--- Generating {n_image} verified image questions via RDKit & Matplotlib ---")
             pool = self.image_engine.family_pool(topic)
             for idx in range(n_image):
-                q = self.image_engine.build_question(pool)
-                q["question_format"] = question_format
-                q["topic"] = topic if topic != "ALL" else q.get("image_family", "General Chemistry")
-                q["difficulty"] = difficulty
+                max_attempts = 20
+                for attempt in range(max_attempts):
+                    q = self.image_engine.build_question(pool)
+                    q["question_format"] = question_format
+                    q["topic"] = topic if topic != "ALL" else q.get("image_family", "General Chemistry")
+                    q["difficulty"] = difficulty
 
-                # Handle Assertion-Reason and Numerical Question Transformations
-                if question_format == "Assertion-Reason":
-                    q["question"] = (
-                        f"Given below are two statements:\n"
-                        f"Assertion (A): For the reaction/system shown, {q.get('question', '').lower().rstrip('.')}.\n"
-                        f"Reason (R): {q.get('explanation', '').split('.')[0]}.\n\n"
-                        f"In the light of the above statements, choose the correct answer from the options given below:"
-                    )
-                    q["option_A"] = "Both (A) and (R) are true and (R) is the correct explanation of (A)."
-                    q["option_B"] = "Both (A) and (R) are true but (R) is NOT the correct explanation of (A)."
-                    q["option_C"] = "(A) is true but (R) is false."
-                    q["option_D"] = "(A) is false but (R) is true."
-                    q["correct_answer"] = "A"
-                    q["distractor_diagnostics"] = {
-                        "A": "Scientifically verified correct Assertion-Reason explanation.",
-                        "B": "Misconception: Assumed Reason does not causally govern the Assertion.",
-                        "C": "Misconception: Discredited the scientifically valid theoretical Reason.",
-                        "D": "Misconception: Inverted truth values of reaction principles."
-                    }
-                elif question_format == "Numerical":
-                    raw_ans = str(q.get("correct_answer", "0"))
-                    num_match = re.search(r"[-+]?\d+", str(q.get(f"option_{raw_ans}", raw_ans)))
-                    int_val = int(num_match.group(0)) if num_match else 1
-                    q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
-                    q["correct_answer"] = str(int_val)
-                    q["option_A"] = ""
-                    q["option_B"] = ""
-                    q["option_C"] = ""
-                    q["option_D"] = ""
+                    # Handle Assertion-Reason and Numerical Question Transformations
+                    if question_format == "Assertion-Reason":
+                        q["question"] = (
+                            f"Given below are two statements:\n"
+                            f"Assertion (A): For the reaction/system shown, {q.get('question', '').lower().rstrip('.')}.\n"
+                            f"Reason (R): {q.get('explanation', '').split('.')[0]}.\n\n"
+                            f"In the light of the above statements, choose the correct answer from the options given below:"
+                        )
+                        q["option_A"] = "Both (A) and (R) are true and (R) is the correct explanation of (A)."
+                        q["option_B"] = "Both (A) and (R) are true but (R) is NOT the correct explanation of (A)."
+                        q["option_C"] = "(A) is true but (R) is false."
+                        q["option_D"] = "(A) is false but (R) is true."
+                        q["correct_answer"] = "A"
+                        q["distractor_diagnostics"] = {
+                            "A": "Scientifically verified correct Assertion-Reason explanation.",
+                            "B": "Misconception: Assumed Reason does not causally govern the Assertion.",
+                            "C": "Misconception: Discredited the scientifically valid theoretical Reason.",
+                            "D": "Misconception: Inverted truth values of reaction principles."
+                        }
+                        break
+                    elif question_format == "Numerical":
+                        raw_ans = str(q.get("correct_answer", "0"))
+                        opt_text = str(q.get(f"option_{raw_ans}", raw_ans))
+
+                        num_match = re.search(r"[-+]?\d+", opt_text)
+                        int_val = int(num_match.group(0)) if num_match else 0
+
+                        float_match = re.search(r"[-+]?\d*\.?\d+", opt_text)
+                        float_val = float(float_match.group(0)) if float_match else float(int_val)
+
+                        # Reject answer key if magnitude < 1 (e.g. rate constant 0.02 min^-1 truncating to 0); regenerate
+                        if abs(int_val) < 1 or abs(float_val) < 1.0:
+                            img_to_clean = q.get("image_path") or q.get("generated_image")
+                            if img_to_clean and os.path.exists(img_to_clean):
+                                try:
+                                    os.remove(img_to_clean)
+                                except OSError:
+                                    pass
+                            if attempt < max_attempts - 1:
+                                continue
+
+                        q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
+                        q["correct_answer"] = str(int_val)
+                        q["option_A"] = ""
+                        q["option_B"] = ""
+                        q["option_C"] = ""
+                        q["option_D"] = ""
+                        break
+                    else:
+                        break
 
                 all_questions.append(q)
                 print(f"  [Image {idx+1}/{n_image}] Built {q.get('image_family')} -> Answer: ({q['correct_answer']})")
