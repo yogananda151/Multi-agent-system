@@ -1108,6 +1108,160 @@ def export_sft_dataset(questions: list, output_path: str = SFT_OUTPUT_JSONL) -> 
 
 
 # ==============================================================================
+# 4. ASSERTION-REASON DISTRACTOR AGENT (CD-NS-KG-MAS)
+# ==============================================================================
+class AssertionReasonDistractorAgent:
+    """
+    CD-NS-KG-MAS Distractor Agent for Assertion-Reason (A/R) Questions.
+    Constructs scientifically verified A/R statements across all 4 standard keys:
+      - (A) Both (A) and (R) are true and (R) is the correct explanation of (A).
+      - (B) Both (A) and (R) are true but (R) is NOT the correct explanation of (A).
+      - (C) (A) is true but (R) is false.
+      - (D) (A) is false but (R) is true.
+    """
+
+    TEMPLATES = {
+        "g_first_order": {
+            "A_true": "The slope of the ln([A]/[A]₀) versus time plot is negative and constant for a first-order reaction.",
+            "A_false": "The slope of the ln([A]/[A]₀) versus time plot becomes steeper as reactant concentration decreases.",
+            "R_true_expl": "The integrated first-order rate law gives ln([A]/[A]₀) = -kt, where -k is the constant slope.",
+            "R_true_nonexpl": "The SI unit of the rate of a chemical reaction is always mol L⁻¹ s⁻¹.",
+            "R_false": "The rate constant k decreases continuously over time during an isothermal reaction.",
+            "expl": "For a first-order reaction, ln([A]/[A]₀) = -kt yields a straight line with constant slope = -k."
+        },
+        "g_arrhenius": {
+            "A_true": "The rate constant k increases exponentially with an increase in absolute temperature.",
+            "A_false": "The rate constant k decreases at elevated temperatures because molecular collisions become chaotic.",
+            "R_true_expl": "According to the Arrhenius relation k = A*exp(-Ea/RT), rising temperature increases the fraction of collisions with energy >= Ea.",
+            "R_true_nonexpl": "The universal gas constant R has a value of approximately 8.314 J K⁻¹ mol⁻¹.",
+            "R_false": "Activation energy Ea is directly proportional to absolute temperature and drops to zero at 273 K.",
+            "expl": "The Arrhenius equation k = A*e^(-Ea/RT) governs exponential temperature dependence of rate constant."
+        },
+        "g_zero_order": {
+            "A_true": "For a zero-order reaction, the rate of reaction remains constant regardless of reactant concentration.",
+            "A_false": "Doubling the initial concentration of reactant in a zero-order reaction quadruples the reaction rate.",
+            "R_true_expl": "The differential rate law is Rate = k[A]⁰ = k, showing rate is independent of [A].",
+            "R_true_nonexpl": "At chemical equilibrium, the rate of the forward reaction equals the rate of the reverse reaction.",
+            "R_false": "Zero-order reactions have infinite half-lives at any concentration.",
+            "expl": "Zero-order kinetics exhibit constant rate = k independent of concentration."
+        },
+        "g_zero_order_two_step": {
+            "A_true": "A catalyst increases reaction rate by providing an alternative pathway with lower activation energy without changing overall enthalpy change.",
+            "A_false": "A catalyst shifts the chemical equilibrium constant K_eq by preferentially accelerating only the forward reaction.",
+            "R_true_expl": "Enthalpy change ΔH is a state function depending only on initial and final states, whereas Ea depends on the pathway.",
+            "R_true_nonexpl": "Catalysts can function in either homogeneous or heterogeneous phases.",
+            "R_false": "A positive catalyst increases both the activation energy barrier and the net reaction enthalpy.",
+            "expl": "Catalysts lower activation energy Ea while leaving thermodynamic state functions (ΔH, ΔG, K_eq) unchanged."
+        },
+        "g_exp_decay": {
+            "A_true": "The half-life of a first-order reaction is completely independent of the initial concentration of reactants.",
+            "A_false": "The half-life of a first-order reaction doubles when the initial reactant concentration is doubled.",
+            "R_true_expl": "The half-life formula t₁/₂ = ln(2)/k = 0.693/k contains no reactant concentration term.",
+            "R_true_nonexpl": "The reaction quotient Q_c equals the equilibrium constant K_c when a system reaches dynamic equilibrium.",
+            "R_false": "A first-order reaction reaches 100% completion in exactly two half-life intervals (2*t₁/₂).",
+            "expl": "First-order half-life t₁/₂ = 0.693/k is invariant with respect to initial concentration [A]₀."
+        },
+    }
+
+    GENERIC_TEMPLATES = {
+        "organic": {
+            "A_true": "The molecular structure possesses planar sp² hybridized carbons with delocalized pi electron density.",
+            "A_false": "All carbon atoms in the shown structure are sp³ hybridized and adopt rigid tetrahedral geometry.",
+            "R_true_expl": "Unhybridized 2p orbitals overlap sideways to form delocalized pi bonds perpendicular to the molecular plane.",
+            "R_true_nonexpl": "Markovnikov's rule predicts electrophilic addition regiochemistry in asymmetric alkenes.",
+            "R_false": "Carbon-carbon double bonds rotate freely at room temperature without requiring energy.",
+            "expl": "Planar sp² centers allow sideways 2p-2p orbital overlap forming stable pi systems."
+        },
+        "inorganic": {
+            "A_true": "The molecular geometry and bond angles are determined by valence shell electron pair repulsions.",
+            "A_false": "Lone pair - lone pair repulsions are weaker than bond pair - bond pair repulsions in the central atom.",
+            "R_true_expl": "Non-bonding lone pairs are localized closer to the central nucleus and occupy greater angular volume than shared bonding pairs.",
+            "R_true_nonexpl": "Electronegativity generally increases across a period from left to right in the periodic table.",
+            "R_false": "Valence lone pairs exert zero electrostatic repulsion on adjacent bonding orbitals.",
+            "expl": "VSEPR theory establishes lone pair > bond pair repulsion hierarchy governing angular geometry."
+        },
+        "default": {
+            "A_true": "The chemical system shown adheres to fundamental thermodynamic and kinetic conservation laws.",
+            "A_false": "The chemical system shown violates the law of conservation of mass during phase transition.",
+            "R_true_expl": "Total energy and atomic stoichiometry are strictly conserved in isolated and closed systems.",
+            "R_true_nonexpl": "The standard molar volume of an ideal gas at STP is approximately 22.7 liters.",
+            "R_false": "Spontaneous chemical processes can occur with a net decrease in the total entropy of the universe.",
+            "expl": "Standard chemical principles require strict adherence to thermodynamic conservation laws."
+        }
+    }
+
+    def transform(self, q: dict, target_key: str = None) -> dict:
+        family = q.get("image_family", "")
+        if family in self.TEMPLATES:
+            data = self.TEMPLATES[family]
+        elif family.startswith("org_") or "organic" in str(q.get("topic", "")).lower():
+            data = self.GENERIC_TEMPLATES["organic"]
+        elif family.startswith("inorg_") or "bonding" in str(q.get("topic", "")).lower():
+            data = self.GENERIC_TEMPLATES["inorganic"]
+        else:
+            data = self.GENERIC_TEMPLATES["default"]
+
+        if not target_key or target_key not in ["A", "B", "C", "D"]:
+            target_key = random.choice(["A", "B", "C", "D"])
+
+        if target_key == "A":
+            assertion = data["A_true"]
+            reason = data["R_true_expl"]
+            diagnostics = {
+                "A": "Scientifically verified: Both Assertion and Reason are true, and Reason is the correct explanation.",
+                "B": "Misconception: Assumed Reason is merely an independent true fact rather than the direct causal explanation.",
+                "C": "Misconception: Discredited the scientifically established theoretical Reason.",
+                "D": "Misconception: Falsely rejected the empirical Assertion as false."
+            }
+            explanation = f"Both (A) and (R) are true and (R) correctly explains (A). {data['expl']}"
+        elif target_key == "B":
+            assertion = data["A_true"]
+            reason = data["R_true_nonexpl"]
+            diagnostics = {
+                "A": "Misconception: Assumed causal linkage between two true but scientifically independent principles.",
+                "B": "Scientifically verified: Both Assertion and Reason are true statements, but Reason does NOT explain Assertion.",
+                "C": "Misconception: Discredited the truth value of the valid scientific Reason.",
+                "D": "Misconception: Believed Assertion is false when it is an experimentally verified property."
+            }
+            explanation = f"Both (A) and (R) are true statements, but (R) is NOT the correct explanation of (A). (R) states an independent scientific fact."
+        elif target_key == "C":
+            assertion = data["A_true"]
+            reason = data["R_false"]
+            diagnostics = {
+                "A": "Misconception: Accepted a scientifically false Reason as a valid explanation.",
+                "B": "Misconception: Failed to recognize that Reason contradicts fundamental chemical laws.",
+                "C": "Scientifically verified: Assertion is true, while Reason is a scientifically false claim.",
+                "D": "Misconception: Inverted truth values of both statements."
+            }
+            explanation = f"(A) is true but (R) is false. Reason contradicts fundamental principles: {data['R_false']} is false."
+        else:  # "D"
+            assertion = data["A_false"]
+            reason = data["R_true_expl"]
+            diagnostics = {
+                "A": "Misconception: Accepted a false Assertion as chemically valid.",
+                "B": "Misconception: Failed to identify that the Assertion violates core chemical principles.",
+                "C": "Misconception: Believed Assertion is true while rejecting the valid Reason.",
+                "D": "Scientifically verified: Assertion is false, but Reason is a true chemical fact."
+            }
+            explanation = f"(A) is false but (R) is true. Assertion is chemically invalid: {data['A_false']}, while Reason is a verified law."
+
+        q["question"] = (
+            f"Given below are two statements:\n"
+            f"Assertion (A): {assertion}\n"
+            f"Reason (R): {reason}\n\n"
+            f"In the light of the above statements, choose the correct answer from the options given below:"
+        )
+        q["option_A"] = "Both (A) and (R) are true and (R) is the correct explanation of (A)."
+        q["option_B"] = "Both (A) and (R) are true but (R) is NOT the correct explanation of (A)."
+        q["option_C"] = "(A) is true but (R) is false."
+        q["option_D"] = "(A) is false but (R) is true."
+        q["correct_answer"] = target_key
+        q["distractor_diagnostics"] = diagnostics
+        q["explanation"] = explanation
+        return q
+
+
+# ==============================================================================
 # 5. MAIN AGENT 4 ORCHESTRATOR
 # ==============================================================================
 class MultimodalChemistryAgent:
@@ -1116,6 +1270,7 @@ class MultimodalChemistryAgent:
     def __init__(self):
         self.image_engine = ImageQuestionEngine()
         self.text_engine = TextQuestionEngine()
+        self.ar_distractor_agent = AssertionReasonDistractorAgent()
 
     def generate(
         self,
@@ -1163,23 +1318,8 @@ class MultimodalChemistryAgent:
 
                     # Handle Assertion-Reason and Numerical Question Transformations
                     if question_format == "Assertion-Reason":
-                        q["question"] = (
-                            f"Given below are two statements:\n"
-                            f"Assertion (A): For the reaction/system shown, {q.get('question', '').lower().rstrip('.')}.\n"
-                            f"Reason (R): {q.get('explanation', '').split('.')[0]}.\n\n"
-                            f"In the light of the above statements, choose the correct answer from the options given below:"
-                        )
-                        q["option_A"] = "Both (A) and (R) are true and (R) is the correct explanation of (A)."
-                        q["option_B"] = "Both (A) and (R) are true but (R) is NOT the correct explanation of (A)."
-                        q["option_C"] = "(A) is true but (R) is false."
-                        q["option_D"] = "(A) is false but (R) is true."
-                        q["correct_answer"] = "A"
-                        q["distractor_diagnostics"] = {
-                            "A": "Scientifically verified correct Assertion-Reason explanation.",
-                            "B": "Misconception: Assumed Reason does not causally govern the Assertion.",
-                            "C": "Misconception: Discredited the scientifically valid theoretical Reason.",
-                            "D": "Misconception: Inverted truth values of reaction principles."
-                        }
+                        ar_key = ["A", "B", "C", "D"][idx % 4]
+                        q = self.ar_distractor_agent.transform(q, target_key=ar_key)
                         break
                     elif question_format == "Numerical":
                         raw_ans = str(q.get("correct_answer", "0"))

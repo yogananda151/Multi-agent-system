@@ -120,12 +120,14 @@ class TestChemistrySystem(unittest.TestCase):
     def test_08_multi_format_generation(self):
         """Test Assertion-Reason and Numerical Integer question generation."""
         agent4 = MultimodalChemistryAgent()
-        # Assertion-Reason format
-        qs_ar = agent4.generate(total_count=1, mode="image", topic="Chemical Kinetics", question_format="Assertion-Reason")
-        self.assertEqual(len(qs_ar), 1)
-        self.assertIn("Assertion (A)", qs_ar[0]["question"])
-        self.assertIn("Reason (R)", qs_ar[0]["question"])
-        self.assertEqual(qs_ar[0]["correct_answer"], "A")
+        # Assertion-Reason format (verifies diverse keys A, B, C, D via Distractor Agent)
+        qs_ar = agent4.generate(total_count=4, mode="image", topic="Chemical Kinetics", question_format="Assertion-Reason")
+        self.assertEqual(len(qs_ar), 4)
+        for q in qs_ar:
+            self.assertIn("Assertion (A)", q["question"])
+            self.assertIn("Reason (R)", q["question"])
+            self.assertIn(q["correct_answer"], ["A", "B", "C", "D"])
+        self.assertEqual([q["correct_answer"] for q in qs_ar], ["A", "B", "C", "D"])
 
         # Numerical Integer format
         qs_num = agent4.generate(total_count=1, mode="image", topic="Chemical Kinetics", question_format="Numerical")
