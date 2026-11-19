@@ -202,6 +202,109 @@ class TestChemistrySystem(unittest.TestCase):
         vs.close()
         print("\n[PASS] HAS_CORRECT_OPTION edge propagation to correct_option field verified.")
 
+    def test_11_deterministic_validators(self):
+        """Test DeterministicValidator recomputes answers programmatically without LLM."""
+        from verification.deterministic_validator import DeterministicValidator
+
+        # 1. First-order kinetics (rate constant)
+        q_fo = {
+            "image_family": "g_first_order",
+            "question": "The graph shows a first-order reaction ln([A]/[A]₀) vs time. Point (60, -1.20).",
+            "option_A": "0.0200 min⁻¹",
+            "option_B": "0.0400 min⁻¹",
+            "correct_answer": "A",
+            "explanation": "Slope = -k. Here slope = -1.20/60 = -0.0200, so k = 0.0200 min⁻¹."
+        }
+        passed, msg = DeterministicValidator.validate(q_fo)
+        self.assertTrue(passed, f"First-order validation failed: {msg}")
+
+        # 2. Arrhenius activation energy
+        q_arr = {
+            "image_family": "g_arrhenius",
+            "question": "Arrhenius plot (ln k vs 1/T) with slope. Coordinates (0.002, 10.0) and (0.003, -1.5).",
+            "option_A": "95 kJ mol⁻¹",
+            "correct_answer": "A",
+            "explanation": "Slope = -Ea/R = -11500. Ea = 95 kJ/mol."
+        }
+        passed, msg = DeterministicValidator.validate(q_arr)
+        self.assertTrue(passed, f"Arrhenius validation failed: {msg}")
+
+        # 3. Stoichiometry / combustion
+        q_comb = {
+            "image_family": "org_combustion",
+            "smiles": "CC(=O)Oc1ccccc1C(=O)O",  # Aspirin C9H8O4 + 9 O2 -> 9 CO2 + 4 H2O
+            "question": "If 0.50 mol undergoes complete combustion, the amount of O₂ required is",
+            "option_A": "4.5 mol",
+            "correct_answer": "A",
+            "explanation": "O₂ per mole = 9 + 8/4 - 4/2 = 9. Total = 0.50 × 9 = 4.5 mol."
+        }
+        passed, msg = DeterministicValidator.validate(q_comb)
+        self.assertTrue(passed, f"Stoichiometry validation failed: {msg}")
+
+        # 4. VSEPR geometry
+        q_vsepr = {
+            "image_family": "inorg_shape",
+            "smiles": "FS(F)(F)F",  # SF4 -> See-saw
+            "question": "The molecular geometry of SF4 is",
+            "option_A": "See-saw",
+            "correct_answer": "A",
+            "explanation": "SF4 has 4 bond pairs and 1 lone pair -> See-saw shape."
+        }
+        passed, msg = DeterministicValidator.validate(q_vsepr)
+        self.assertTrue(passed, f"VSEPR validation failed: {msg}")
+
+        # 5. Numerical format validator rejects magnitude < 1
+        q_bad_num = {
+            "question_format": "Numerical",
+            "correct_answer": "0",
+            "question": "The rate constant is [Answer in nearest integer]"
+        }
+        passed, msg = DeterministicValidator.validate(q_bad_num)
+        self.assertFalse(passed)
+        self.assertIn("magnitude < 1", msg)
+
+        print("\n[PASS] DeterministicValidator programmatic recomputation verified.")
+
+    def test_12_specialized_agents_and_cross_chapter_pairer(self):
+        """Test Constraint, Formulation, Distractor, Verification agents and KG Cross-Chapter Pairer."""
+        from specialized_agents import ConstraintAgent, FormulationAgent, DistractorAgent, VerificationAgent
+        from cross_chapter_pairer import CrossChapterPairer
+
+        # 1. Constraint Agent
+        c_agent = ConstraintAgent()
+        params = c_agent.choose_parameters("g_first_order", difficulty="Hard")
+        self.assertTrue(c_agent.is_realistic(params))
+        self.assertGreater(params["rate_constant"], 0)
+
+        # 2. Distractor Agent
+        d_agent = DistractorAgent()
+        dist_res = d_agent.generate("g_first_order", "0.0200 min⁻¹", {"rate_constant": 0.02})
+        self.assertEqual(len(dist_res["distractors"]), 3)
+        self.assertIn("diagnostics", dist_res)
+
+        # 3. Formulation Agent
+        f_agent = FormulationAgent()
+        stem = f_agent.write_stem(params, "g_first_order", question_format="MCQ")
+        self.assertIn("first-order", stem.lower())
+        opts = f_agent.format_options(dist_res["correct"], dist_res["distractors"], target_key="B")
+        self.assertEqual(opts["correct_answer"], "B")
+        self.assertEqual(opts["option_B"], dist_res["correct"])
+
+        # 4. Verification Agent Revision
+        v_agent = VerificationAgent()
+        bad_q = {"question_format": "Numerical", "correct_answer": "0", "question": "Rate constant", "explanation": "k = 0.025 min⁻¹"}
+        revised = v_agent.revise(bad_q, "Numerical answer key 0 has magnitude < 1.")
+        self.assertGreaterEqual(int(revised["correct_answer"]), 1)
+
+        # 5. Cross-Chapter Pairer via KG Traversal
+        pairer = CrossChapterPairer()
+        pairs = pairer.find_pairs("Chemical Kinetics", max_pairs=2)
+        self.assertGreaterEqual(len(pairs), 1)
+        self.assertIn("coupling_formula", pairs[0])
+        self.assertIn("description", pairs[0])
+
+        print("\n[PASS] Specialized Agents and Cross-Chapter KG Pairer verified.")
+
 
 if __name__ == "__main__":
     unittest.main()

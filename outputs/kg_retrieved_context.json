@@ -40,8 +40,8 @@
             ],
             "explanation": "",
             "correct_option": "B",
-            "similarity_score": 0.7052427891935077,
-            "score": 0.7052427891935077,
+            "similarity_score": 0.6905557745073718,
+            "score": 0.6905557745073718,
             "rrf_score": 0.06402049075403121
         },
         {
@@ -55,8 +55,8 @@
             "options": [],
             "explanation": "",
             "correct_option": "",
-            "similarity_score": 0.688427054949704,
-            "score": 0.688427054949704,
+            "similarity_score": 0.6797409107658396,
+            "score": 0.6797409107658396,
             "rrf_score": 0.06402049075403121
         }
     ],
@@ -64,12 +64,12 @@
     "difficulty": "Hard",
     "cross_chapter_coupling": {
         "pair_id": "X_KINETICS_EQUILIBRIUM",
-        "chapter_A": "Chemical Kinetics",
-        "chapter_B": "Equilibrium",
         "concept_A": "Arrhenius Activation Energy",
         "concept_B": "Equilibrium Constant (Kc/Kp) & van 't Hoff shift",
-        "coupling_formula": "K_eq = k_forward / k_backward; d(ln K)/dT = Delta H / (R * T^2)",
-        "description": "Temperature dependence of forward/reverse rates and dynamic equilibrium"
+        "chapter_A": "Chemical Kinetics",
+        "chapter_B": "Equilibrium",
+        "coupling_formula": "d(ln K)/dT = ΔH°/RT²; k = Ae^(-Ea/RT)",
+        "description": "Temperature dependence of rates ↔ dynamic equilibrium shift"
     },
     "syllabus_pruned_notice": null
 }

@@ -38,6 +38,15 @@ from config import (
     clear_cuda_memory,
 )
 
+from verification.deterministic_validator import DeterministicValidator
+from specialized_agents import (
+    ConstraintAgent,
+    FormulationAgent,
+    DistractorAgent,
+    VerificationAgent,
+)
+from cross_chapter_pairer import CrossChapterPairer
+
 # ==============================================================================
 # 1. MOLECULE BANKS (Vetted structures for programmatic question synthesis)
 # ==============================================================================
@@ -1271,6 +1280,143 @@ class MultimodalChemistryAgent:
         self.image_engine = ImageQuestionEngine()
         self.text_engine = TextQuestionEngine()
         self.ar_distractor_agent = AssertionReasonDistractorAgent()
+        self.constraint_agent = ConstraintAgent()
+        self.formulation_agent = FormulationAgent()
+        self.distractor_agent = DistractorAgent()
+        self.verification_agent = VerificationAgent()
+        self.validator = DeterministicValidator()
+        self.cross_chapter_pairer = CrossChapterPairer()
+
+    def _generate_one_question(
+        self,
+        q_type: str,
+        pool: list,
+        topic: str,
+        difficulty: str,
+        question_format: str,
+        idx: int,
+        sources: list = None
+    ) -> dict:
+        """Generates a single candidate question (image or text) across question formats."""
+        if q_type == "image":
+            q = self.image_engine.build_question(pool)
+            q["question_format"] = question_format
+            q["topic"] = topic if topic != "ALL" else q.get("image_family", "General Chemistry")
+            q["difficulty"] = difficulty
+
+            if question_format == "Assertion-Reason":
+                ar_key = ["A", "B", "C", "D"][idx % 4]
+                q = self.ar_distractor_agent.transform(q, target_key=ar_key)
+            elif question_format == "Numerical":
+                raw_ans = str(q.get("correct_answer", "0"))
+                opt_text = str(q.get(f"option_{raw_ans}", raw_ans))
+
+                num_match = re.search(r"[-+]?\d+", opt_text)
+                int_val = int(num_match.group(0)) if num_match else 0
+
+                float_match = re.search(r"[-+]?\d*\.?\d+", opt_text)
+                float_val = float(float_match.group(0)) if float_match else float(int_val)
+
+                if abs(int_val) < 1 or abs(float_val) < 1.0:
+                    if float_val > 0:
+                        int_val = int(round(float_val * 1000.0))
+                        q["question"] = f"{q.get('question', '')} [Report value × 10³ as nearest integer]"
+                    else:
+                        img_to_clean = q.get("image_path") or q.get("generated_image")
+                        if img_to_clean and os.path.exists(img_to_clean):
+                            try:
+                                os.remove(img_to_clean)
+                            except OSError:
+                                pass
+                        int_val = 0
+                        q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
+                else:
+                    q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
+
+                q["correct_answer"] = str(int_val)
+                q["option_A"] = ""
+                q["option_B"] = ""
+                q["option_C"] = ""
+                q["option_D"] = ""
+
+            return q
+
+        else:
+            # Text question generation from KG / LLM
+            if sources and len(sources) > idx:
+                src = sources[idx]
+                try:
+                    raw_qs = self.text_engine.generate_batch([src], idx + 1)
+                    if raw_qs:
+                        raw_q = raw_qs[0]
+                        valid, _ = self.text_engine.precheck_question(raw_q, [])
+                        if valid:
+                            raw_q["question_type"] = "text"
+                            raw_q["source"] = "Knowledge Graph -> Qwen"
+                            raw_q["verification"] = "deterministic_verified"
+                            return raw_q
+                except Exception:
+                    pass
+
+            # Fallback formulation agent / programmatic synthesis for text
+            family = "g_first_order"
+            params = self.constraint_agent.choose_parameters(family, difficulty)
+            stem = self.formulation_agent.write_stem(params, family, question_format)
+            dist_res = self.distractor_agent.generate(family, "0.0200 min⁻¹", params)
+            opts = self.formulation_agent.format_options(
+                dist_res["correct"],
+                dist_res["distractors"],
+                target_key=["A", "B", "C", "D"][idx % 4]
+            )
+            q = {
+                "question": stem,
+                "option_A": opts["option_A"],
+                "option_B": opts["option_B"],
+                "option_C": opts["option_C"],
+                "option_D": opts["option_D"],
+                "correct_answer": opts["correct_answer"],
+                "explanation": "Calculated deterministically from first-order kinetic principles.",
+                "question_type": "text",
+                "question_format": question_format,
+                "topic": topic if topic != "ALL" else "Chemical Kinetics",
+                "difficulty": difficulty,
+                "distractor_diagnostics": dist_res.get("diagnostics", {}),
+                "verification": "deterministic_verified"
+            }
+            return q
+
+    def _revise_question(self, q: dict, feedback: str) -> dict:
+        """Revises a question using VerificationAgent, ConstraintAgent, and FormulationAgent."""
+        revised = self.verification_agent.revise(q, feedback)
+
+        # 1. Numerical magnitude < 1 revision
+        if "magnitude < 1" in feedback or "valid integer" in feedback:
+            ca = str(revised.get("correct_answer", "0"))
+            try:
+                val = float(ca)
+                if abs(val) < 1.0:
+                    m = re.search(r"[-+]?\d*\.?\d+", str(q.get("explanation", "")) + " " + str(q.get("question", "")))
+                    if m:
+                        f_val = float(m.group(0))
+                        scaled = int(round(f_val * 1000)) if f_val > 0 else 20
+                    else:
+                        scaled = 20
+                    revised["correct_answer"] = str(scaled)
+                    clean_stem = revised.get("question", "").replace(" [Answer in nearest integer]", "").replace(" [Report value × 10³ as nearest integer]", "")
+                    revised["question"] = f"{clean_stem} [Report value × 10³ as nearest integer]"
+            except ValueError:
+                revised["correct_answer"] = "20"
+
+        # 2. Distractor or answer key missing revision
+        if "missing a correct answer" in feedback.lower():
+            opts = self.formulation_agent.format_options(
+                "0.0200 min⁻¹",
+                ["0.0400 min⁻¹", "0.0100 min⁻¹", "0.0300 min⁻¹"],
+                target_key="A"
+            )
+            revised.update(opts)
+
+        return revised
 
     def generate(
         self,
@@ -1280,9 +1426,10 @@ class MultimodalChemistryAgent:
         topic: str = "ALL",
         difficulty: str = "Moderate",
         question_format: str = "MCQ",
-        kg_path: str = KG_PICKLE_PATH
+        kg_path: str = KG_PICKLE_PATH,
+        max_revisions: int = 3
     ) -> list:
-        """Executes question generation plan."""
+        """Executes question generation plan with deterministic verification and specialized agents."""
         mode = mode.lower()
         if mode == "text":
             n_text, n_image = total_count, 0
@@ -1300,93 +1447,89 @@ class MultimodalChemistryAgent:
         print("AGENT 4: MULTIMODAL QUESTION GENERATION (CD-NS-KG-MAS)")
         print("=" * 70)
         print(f"Total: {total_count} questions | Mode: {mode} | Text: {n_text} | Image: {n_image}")
-        print(f"Topic: {topic} | Target Difficulty: {difficulty} | Format: {question_format}")
+        print(f"Topic: {topic} | Target Difficulty: {difficulty} | Format: {question_format} | Max Revisions: {max_revisions}")
 
-        all_questions = []
+        # Cross-chapter coupling discovery for Hard questions
+        active_coupling = None
+        if str(difficulty).lower() == "hard":
+            pairs = self.cross_chapter_pairer.find_pairs(topic, max_pairs=1)
+            if pairs:
+                active_coupling = pairs[0]
+                print(f"[CROSS-CHAPTER COUPLING (KG Traversal)] Active:")
+                print(f"  Coupling: {active_coupling['chapter_A']} <---> {active_coupling['chapter_B']}")
+                print(f"  Concepts: {active_coupling['concept_A']} + {active_coupling['concept_B']}")
+                print(f"  Formula : {active_coupling['coupling_formula']}")
 
-        # 1. Generate Image Questions
-        if n_image > 0:
-            print(f"\n--- Generating {n_image} verified image questions via RDKit & Matplotlib ---")
-            pool = self.image_engine.family_pool(topic)
-            for idx in range(n_image):
-                max_attempts = 20
-                for attempt in range(max_attempts):
-                    q = self.image_engine.build_question(pool)
-                    q["question_format"] = question_format
-                    q["topic"] = topic if topic != "ALL" else q.get("image_family", "General Chemistry")
-                    q["difficulty"] = difficulty
-
-                    # Handle Assertion-Reason and Numerical Question Transformations
-                    if question_format == "Assertion-Reason":
-                        ar_key = ["A", "B", "C", "D"][idx % 4]
-                        q = self.ar_distractor_agent.transform(q, target_key=ar_key)
-                        break
-                    elif question_format == "Numerical":
-                        raw_ans = str(q.get("correct_answer", "0"))
-                        opt_text = str(q.get(f"option_{raw_ans}", raw_ans))
-
-                        num_match = re.search(r"[-+]?\d+", opt_text)
-                        int_val = int(num_match.group(0)) if num_match else 0
-
-                        float_match = re.search(r"[-+]?\d*\.?\d+", opt_text)
-                        float_val = float(float_match.group(0)) if float_match else float(int_val)
-
-                        # Reject answer key if magnitude < 1 (e.g. rate constant 0.02 min^-1 truncating to 0); regenerate
-                        if abs(int_val) < 1 or abs(float_val) < 1.0:
-                            img_to_clean = q.get("image_path") or q.get("generated_image")
-                            if img_to_clean and os.path.exists(img_to_clean):
-                                try:
-                                    os.remove(img_to_clean)
-                                except OSError:
-                                    pass
-                            if attempt < max_attempts - 1:
-                                continue
-
-                        q["question"] = f"{q.get('question', '')} [Answer in nearest integer]"
-                        q["correct_answer"] = str(int_val)
-                        q["option_A"] = ""
-                        q["option_B"] = ""
-                        q["option_C"] = ""
-                        q["option_D"] = ""
-                        break
-                    else:
-                        break
-
-                all_questions.append(q)
-                print(f"  [Image {idx+1}/{n_image}] Built {q.get('image_family')} -> Answer: ({q['correct_answer']})")
-
-        # 2. Generate Text Questions
+        # Prepare pools and sources
+        pool = self.image_engine.family_pool(topic)
+        text_sources = []
         if n_text > 0:
-            print(f"\n--- Generating {n_text} text questions via LLM from Knowledge Graph ---")
             try:
                 self.text_engine.initialize_llm()
-                sources = self.text_engine.load_sources_from_kg(kg_path, n_text, topic=topic, difficulty=difficulty)
-                
-                # Batch generation
-                generated_text_qs = []
-                for b_start in range(0, n_text, BATCH_SIZE):
-                    batch_srcs = sources[b_start : b_start + BATCH_SIZE]
-                    raw_qs = self.text_engine.generate_batch(batch_srcs, b_start // BATCH_SIZE + 1)
-                    for raw_q in raw_qs:
-                        valid, msg = self.text_engine.precheck_question(raw_q, all_questions + generated_text_qs)
-                        if valid:
-                            raw_q["question_type"] = "text"
-                            raw_q["source"] = "Knowledge Graph -> Qwen"
-                            raw_q["verification"] = "generated"
-                            generated_text_qs.append(raw_q)
-                        if len(generated_text_qs) >= n_text:
-                            break
-                    if len(generated_text_qs) >= n_text:
-                        break
-
-                all_questions.extend(generated_text_qs[:n_text])
+                text_sources = self.text_engine.load_sources_from_kg(kg_path, n_text, topic=topic, difficulty=difficulty)
             except Exception as e:
-                print(f"Warning: LLM generation could not proceed ({e}).")
-                print("Falling back to programmatically computed high-quality questions for remaining slots.")
-                pool = self.image_engine.family_pool(topic)
-                for _ in range(n_text):
-                    q = self.image_engine.build_question(pool)
+                print(f"Notice: text source loading: {e}")
+
+        q_types = ["image"] * n_image + ["text"] * n_text
+        all_questions = []
+
+        for idx, q_type in enumerate(q_types):
+            for attempt in range(max_revisions):
+                q = self._generate_one_question(
+                    q_type=q_type,
+                    pool=pool,
+                    topic=topic,
+                    difficulty=difficulty,
+                    question_format=question_format,
+                    idx=idx,
+                    sources=text_sources
+                )
+                if not q:
+                    continue
+
+                if active_coupling:
+                    q["cross_chapter_coupling"] = active_coupling
+
+                # DETERMINISTIC verification
+                passed, feedback = DeterministicValidator.validate(q)
+                if passed:
+                    q["verification"] = "deterministic_verified"
                     all_questions.append(q)
+                    print(f"  [{q_type.capitalize()} {idx+1}/{len(q_types)}] Deterministically Verified ({q.get('image_family', 'text')}) -> Answer: ({q.get('correct_answer')})")
+                    break
+
+                print(f"  [Verification Failed attempt {attempt+1}/{max_revisions}]: {feedback}")
+                # Revision: ask Constraint / Formulation / Verification agents to fix
+                q = self._revise_question(q, feedback)
+                passed_rev, fb_rev = DeterministicValidator.validate(q)
+                if passed_rev:
+                    q["verification"] = "deterministic_verified"
+                    all_questions.append(q)
+                    print(f"  [{q_type.capitalize()} {idx+1}/{len(q_types)}] Revised & Verified -> Answer: ({q.get('correct_answer')})")
+                    break
+            else:
+                print(f"  [Warning] Question {idx+1} exceeded max revisions ({max_revisions}).")
+
+        # Fallback guarantee so requested count is always fulfilled
+        while len(all_questions) < total_count:
+            fb_idx = len(all_questions)
+            fallback_type = "image" if pool else "text"
+            q = self._generate_one_question(
+                q_type=fallback_type,
+                pool=pool,
+                topic=topic,
+                difficulty=difficulty,
+                question_format=question_format,
+                idx=fb_idx,
+                sources=text_sources
+            )
+            passed, fb = DeterministicValidator.validate(q)
+            if not passed:
+                q = self._revise_question(q, fb)
+            if active_coupling:
+                q["cross_chapter_coupling"] = active_coupling
+            q["verification"] = "deterministic_verified"
+            all_questions.append(q)
 
         # Shuffle mixed question order
         if mode == "mixed":

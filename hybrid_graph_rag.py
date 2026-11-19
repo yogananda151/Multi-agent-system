@@ -104,14 +104,23 @@ class HybridGraphRAGEngine:
         # 1. Cross-Chapter Concept Coupling for Hard Questions (CD-NS-KG-MAS Eq. 2)
         cross_chapter_info = None
         if difficulty.lower() == "hard":
-            # Match cross-chapter pair C = {(u, v) in E | chapter(u) != chapter(v)}
-            for pair in CROSS_CHAPTER_PAIRS:
-                if (topic.lower() in pair["chapter_A"].lower()) or (topic.lower() in pair["chapter_B"].lower()):
-                    cross_chapter_info = pair
-                    break
+            try:
+                from cross_chapter_pairer import CrossChapterPairer
+                pairer = CrossChapterPairer()
+                pairs = pairer.find_pairs(topic, max_pairs=1)
+                if pairs:
+                    cross_chapter_info = pairs[0]
+            except Exception:
+                pass
+
             if not cross_chapter_info:
-                # Default cross-chapter coupling if no exact topic match
-                cross_chapter_info = CROSS_CHAPTER_PAIRS[0]  # Thermo + Electro
+                # Fallback to predefined pairs
+                for pair in CROSS_CHAPTER_PAIRS:
+                    if (topic.lower() in pair["chapter_A"].lower()) or (topic.lower() in pair["chapter_B"].lower()):
+                        cross_chapter_info = pair
+                        break
+            if not cross_chapter_info and CROSS_CHAPTER_PAIRS:
+                cross_chapter_info = CROSS_CHAPTER_PAIRS[0]
 
             print(f"\n[CROSS-CHAPTER COUPLING] Active for Hard Question Setting:")
             print(f"  Coupling: {cross_chapter_info['chapter_A']} <---> {cross_chapter_info['chapter_B']}")
